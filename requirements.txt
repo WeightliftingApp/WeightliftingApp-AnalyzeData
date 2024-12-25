@@ -1,0 +1,6 @@
+openai
+tqdm
+jupyter
+pandas
+numpy
+matplotlib
