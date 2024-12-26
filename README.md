@@ -2,7 +2,11 @@
 
 This repo provides a variety of scripts to analyze the data from [Weightlifting App](https://apps.apple.com/us/app/weightlifting-app/id1266077653) 💪
 
-## Setup
+## Data Setup
+
+You can either use your own data or use the example data provided in the `data/example-*.wld` files.
+
+### Using Your Own Data
 
 1. Open [Weightliting App](https://apps.apple.com/us/app/weightlifting-app/id1266077653) on your iPhone and navigate to User -> Settings -> Export All Data.
 
@@ -10,11 +14,11 @@ This repo provides a variety of scripts to analyze the data from [Weightlifting 
 
 2. Send the data to yourself (eg. via email)
 
-3. Place the `.wld` file in the `data` folder as `data.wld`
+3. Place your `.wld` file in the `data` folder and update the `file_path` in the `WLD` class in the notebook to the name of the file(s) you want to use.
 
-4. Run `pip install -r requirements.txt` to install the dependencies
+## Usage
 
-5. Run any of the scripts in the `src/notebooks/` folder or create your own!
+Run any of the `.ipynb` jupyter notebooks in the `src/` folder or create your own!
 
 ## Contributing
 

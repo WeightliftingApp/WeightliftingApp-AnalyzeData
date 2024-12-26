@@ -1,6 +1,5 @@
-openai
-tqdm
 jupyter
 pandas
 numpy
 matplotlib
+seaborn

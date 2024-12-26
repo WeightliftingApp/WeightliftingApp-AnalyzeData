@@ -1,57 +1,41 @@
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Optional, Any, Dict
 import weakref
 
 
-class Settings(object):
-    def __init__(
-        self,
-        data: object,
-        startWeekOnMonday: bool,
-        disableSleep: bool,
-        weightInLbs: bool,
-        distanceInMiles: bool,
-        restTimerDuration: int,
-        restTimerAutoStart: bool,
-        restTimerNotification: bool,
-        showSmartNames: bool,
-        smartNicknames: dict,
-        showEquivalencyChart: bool,
-        showLastWorkout: bool,
-        showWorkoutDetails: bool,
-        nonRepSetsVolume: bool,
-        bodyweightIsVolume: bool,
-        bodyweightMultiplier: float,
-        prefersRIR: Optional[bool] = None,
-        graphScaleYEnabled: Optional[bool] = None,
-        showSortDuringExercise: Optional[bool] = None,
-        sortToShowDuringExercise: Optional[int] = None,
-    ):
-        self.data = weakref.ref(data)
-        self.startWeekOnMonday = startWeekOnMonday
-        self.disableSleep = disableSleep
-        self.weightInLbs = weightInLbs
-        self.distanceInMiles = distanceInMiles
-        self.prefersRIR = prefersRIR
-        self.restTimerDuration = restTimerDuration
-        self.restTimerAutoStart = restTimerAutoStart
-        self.restTimerNotification = restTimerNotification
-        self.showSmartNames = showSmartNames
-        self.smartNicknames = smartNicknames
-        self.graphScaleYEnabled = graphScaleYEnabled
-        self.showEquivalencyChart = showEquivalencyChart
-        self.showLastWorkout = showLastWorkout
-        self.showSortDuringExercise = showSortDuringExercise
-        self.sortToShowDuringExercise = sortToShowDuringExercise
-        self.showWorkoutDetails = showWorkoutDetails
-        self.nonRepSetsVolume = nonRepSetsVolume
-        self.bodyweightIsVolume = bodyweightIsVolume
-        self.bodyweightMultiplier = bodyweightMultiplier
+@dataclass
+class Settings:
+    startWeekOnMonday: bool
+    disableSleep: bool
+    weightInLbs: bool
+    distanceInMiles: bool
+    restTimerDuration: int
+    restTimerAutoStart: bool
+    restTimerNotification: bool
+    showSmartNames: bool
+    smartNicknames: Dict[str, str]
+    showEquivalencyChart: bool
+    showLastWorkout: bool
+    showWorkoutDetails: bool
+    nonRepSetsVolume: bool
+    bodyweightIsVolume: bool
+    bodyweightMultiplier: float
+    prefersRIR: Optional[bool] = None
+    graphScaleYEnabled: Optional[bool] = None
+    showSortDuringExercise: Optional[bool] = None
+    sortToShowDuringExercise: Optional[int] = None
+    data: Any = field(init=False, repr=False)
 
-    def weightMultiplier(self):
+    def __init__(self, data, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        self.data = weakref.ref(data)
+
+    def weightMultiplier(self) -> float:
         return 1 if self.weightInLbs else 2.20462
 
-    def weightSuffix(self):
+    def weightSuffix(self) -> str:
         return "lbs" if self.weightInLbs else "kg"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Settings()"
