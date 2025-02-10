@@ -25,7 +25,24 @@ class Workout:
         self.dateModified = data.get("dateModified")
         self.supersets = data.get("supersets", [])
         self.user = weakref.ref(user)
-        self.date = datetime.strptime(data.get("date"), "%Y-%m-%d %H:%M")
+
+        # Clean and normalize the date string
+        date_str = data.get("date")
+
+        try:
+            self.date = datetime.strptime(date_str, "%Y-%m-%d %H:%M")
+        except ValueError:
+            try:
+                # Replace any kind of whitespace (including invisible ones) with a single space
+                date_str = " ".join(date_str.split())
+                # Normalize AM/PM format
+                date_str = date_str.replace("a.m.", "AM").replace("p.m.", "PM")
+                self.date = datetime.strptime(date_str, "%Y-%m-%d %I:%M %p")
+            except ValueError:
+                raise ValueError(
+                    f"Unable to parse date: {date_str}. Expected format: YYYY-MM-DD HH:MM or YYYY-MM-DD HH:MM AM/PM"
+                )
+
         self.exercises = [
             Exercise(**e, workout=self) for e in data.get("exercises", [])
         ]
