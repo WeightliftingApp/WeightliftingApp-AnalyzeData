@@ -22,6 +22,9 @@ class Exercise:
         self.workout = weakref.ref(workout)
         self.sets = [Set(**s, exercise=self) for s in data.get("sets", [])]
 
+    def volume(self):
+        return sum(set.volume or 0 for set in self.sets)
+
     def displayName(self) -> str:
         return f"{self.iteration} {self.name}" if self.iteration else self.name
 

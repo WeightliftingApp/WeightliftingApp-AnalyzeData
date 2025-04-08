@@ -47,5 +47,11 @@ class Workout:
             Exercise(**e, workout=self) for e in data.get("exercises", [])
         ]
 
+    def numSets(self):
+        return sum(len(exercise.sets) for exercise in self.exercises)
+
+    def volume(self):
+        return sum(exercise.volume() for exercise in self.exercises)
+
     def __repr__(self):
-        return f"Workout(name={self.name}, uuid={self.uuid}, date={self.date}, dateModified={self.dateModified}, exercises={len(self.exercises)}, supersets={len(self.supersets)})"
+        return f"Workout(name={self.name}, uuid={self.uuid}, date={self.date}, exercises={len(self.exercises)}, supersets={len(self.supersets)})"
