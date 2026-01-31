@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python scripts/convert_weight_xlsx.py:*)",
+      "Bash(source .venv/bin/activate)",
+      "Bash(python3:*)",
+      "Bash(pip3 install:*)",
+      "Bash(/usr/local/bin/python:*)",
+      "Bash(source venv/bin/activate:*)",
+      "Bash(pip install:*)"
+    ]
+  }
+}
