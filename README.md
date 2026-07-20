@@ -20,6 +20,14 @@ You can either use your own data or use the example data provided in the `data/e
 
 Run any of the `.ipynb` jupyter notebooks in the `src/` folder or create your own!
 
+To refresh the bodyweight and DEXA CSV exports from `Weight Log.xlsx`:
+
+```bash
+source venv/bin/activate
+python scripts/convert_weight_xlsx.py
+python scripts/convert_dexa_xlsx.py
+```
+
 ## Contributing
 
 Feel free to contribute to this repo by adding your own scripts or improving existing ones.
