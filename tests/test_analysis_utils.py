@@ -1,7 +1,13 @@
 import unittest
 from datetime import date, datetime
 
-from analysis_utils import calculate_workout_streaks
+import pandas as pd
+
+from analysis_utils import (
+    build_big_three_pr_history,
+    calculate_workout_streaks,
+    mark_pareto_frontier,
+)
 
 
 class CalculateWorkoutStreaksTest(unittest.TestCase):
@@ -51,6 +57,125 @@ class CalculateWorkoutStreaksTest(unittest.TestCase):
         self.assertEqual(calculate_workout_streaks([]), ([], []))
         with self.assertRaises(ValueError):
             calculate_workout_streaks([date(2026, 7, 1)], 0)
+
+
+class MarkParetoFrontierTest(unittest.TestCase):
+    def test_marks_only_points_not_beaten_by_an_equal_or_lighter_bodyweight(self):
+        attempts = pd.DataFrame(
+            {
+                "bodyweight": [190.0, 200.0, 205.0, 210.0, 215.0],
+                "one_rm": [400.0, 450.0, 440.0, 450.0, 470.0],
+            }
+        )
+
+        result = mark_pareto_frontier(attempts)
+
+        self.assertEqual(
+            result.loc[result["is_pareto"], ["bodyweight", "one_rm"]].values.tolist(),
+            [[190.0, 400.0], [200.0, 450.0], [215.0, 470.0]],
+        )
+
+    def test_keeps_tied_attempts_at_the_same_frontier_coordinate(self):
+        attempts = pd.DataFrame(
+            {
+                "bodyweight": [190.0, 190.0, 195.0],
+                "one_rm": [400.0, 400.0, 390.0],
+            }
+        )
+
+        result = mark_pareto_frontier(attempts)
+
+        self.assertEqual(result["is_pareto"].tolist(), [True, True, False])
+
+    def test_invalid_attempts_remain_in_output_but_are_not_frontier_points(self):
+        attempts = pd.DataFrame(
+            {
+                "bodyweight": [190.0, None, 200.0],
+                "one_rm": [400.0, 500.0, None],
+            }
+        )
+
+        result = mark_pareto_frontier(attempts)
+
+        self.assertEqual(result["is_pareto"].tolist(), [True, False, False])
+
+
+class BuildBigThreePrHistoryTest(unittest.TestCase):
+    def setUp(self):
+        self.records = pd.DataFrame(
+            [
+                ("2018-09-01", "Bench", 300.0, "Flat Barbell Bench Press"),
+                ("2018-09-02", "Squat", 400.0, "Back Squats"),
+                ("2018-09-03", "Deadlift", 450.0, "Sumo Deadlifts"),
+                ("2018-09-10", "Deadlift", 440.0, "Conventional Deadlifts"),
+                ("2018-10-03", "Bench", 310.0, "Flat Barbell Bench Press"),
+                ("2018-10-04", "Deadlift", 460.0, "Conventional Deadlifts"),
+                ("2018-10-04", "Deadlift", 455.0, "Sumo Deadlifts"),
+                ("2018-10-12", "Squat", 390.0, "Back Squats"),
+            ],
+            columns=["date", "lift", "one_rm", "variant"],
+        )
+        self.weights = pd.DataFrame(
+            [
+                ("2018-09-24", 192.6),
+                ("2018-10-01", 194.5),
+            ],
+            columns=["week_of", "bodyweight"],
+        )
+
+    def test_seeds_each_lift_and_combined_total_at_first_weight_week(self):
+        history = build_big_three_pr_history(self.records, self.weights)
+        baseline = history[history["date"] == pd.Timestamp("2018-09-24")]
+
+        values = dict(zip(baseline["series"], baseline["one_rm"]))
+        self.assertEqual(values["Bench"], 300.0)
+        self.assertEqual(values["Squat"], 400.0)
+        self.assertEqual(values["Deadlift"], 450.0)
+        self.assertEqual(values["Combined"], 1150.0)
+        self.assertTrue((baseline["bodyweight"] == 192.6).all())
+        self.assertTrue((baseline["is_baseline"]).all())
+
+    def test_emits_only_real_prs_and_uses_best_deadlift_variant(self):
+        history = build_big_three_pr_history(self.records, self.weights)
+
+        bench = history[(history["series"] == "Bench") & ~history["is_baseline"]]
+        squat = history[(history["series"] == "Squat") & ~history["is_baseline"]]
+        deadlift = history[(history["series"] == "Deadlift") & ~history["is_baseline"]]
+
+        self.assertEqual(bench["one_rm"].tolist(), [310.0])
+        self.assertTrue(squat.empty)
+        self.assertEqual(deadlift["one_rm"].tolist(), [460.0])
+        self.assertEqual(deadlift["variant"].tolist(), ["Conventional Deadlifts"])
+
+    def test_combined_updates_on_each_component_pr_and_maps_weekly_weight(self):
+        history = build_big_three_pr_history(self.records, self.weights)
+        combined = history[history["series"] == "Combined"].reset_index(drop=True)
+
+        self.assertEqual(combined["one_rm"].tolist(), [1150.0, 1160.0, 1170.0])
+        self.assertEqual(
+            combined["date"].dt.strftime("%Y-%m-%d").tolist(),
+            ["2018-09-24", "2018-10-03", "2018-10-04"],
+        )
+        self.assertEqual(combined["bodyweight"].tolist(), [192.6, 194.5, 194.5])
+        self.assertEqual(combined["trigger"].tolist(), ["Baseline", "Bench", "Deadlift"])
+
+    def test_missing_weight_week_remains_missing_instead_of_being_invented(self):
+        records = pd.concat(
+            [
+                self.records,
+                pd.DataFrame(
+                    [("2018-10-20", "Bench", 320.0, "Flat Barbell Bench Press")],
+                    columns=self.records.columns,
+                ),
+            ],
+            ignore_index=True,
+        )
+        history = build_big_three_pr_history(records, self.weights)
+        event = history[
+            (history["series"] == "Bench")
+            & (history["date"] == pd.Timestamp("2018-10-20"))
+        ].iloc[0]
+        self.assertTrue(pd.isna(event["bodyweight"]))
 
 
 if __name__ == "__main__":

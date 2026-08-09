@@ -18,7 +18,12 @@ You can either use your own data or use the example data provided in the `data/e
 
 ## Usage
 
-Run any of the `.ipynb` jupyter notebooks in the `src/` folder or create your own!
+Run any of the `.ipynb` Jupyter notebooks in the `src/` folder or create your own.
+
+Key analyses:
+
+- `src/analyze_big_three.ipynb` — lifetime Big Three progression, annual snapshots, historical trends, and one-year projections.
+- `src/analyze_bodyweight_strength_evals.ipynb` — bodyweight-aligned strength history, all-attempt Pareto frontiers, and social-card exports for bench, squat, deadlift, and overhead press.
 
 To refresh the bodyweight and DEXA CSV exports from `Weight Log.xlsx`:
 
