@@ -52,6 +52,17 @@ Use semantic colors when a mark has one of the meanings documented above. Use `C
 
 The preserved notebook outputs from before the migration live under `.artifacts/chart-baselines/2026-08-22-notebooks-pre-shared-style`. The after outputs and side-by-side sheets belong under `.artifacts/chart-comparisons/notebooks`. Keep all three folders ignored.
 
+After executing the notebooks, rebuild the review gallery with:
+
+```bash
+jupyter nbconvert --to markdown \
+  --output-dir .artifacts/chart-comparisons/notebooks/after \
+  src/*.ipynb
+PYTHONPATH=src:. .venv/bin/python scripts/compare_notebook_charts.py
+```
+
+The gallery command requires every baseline image to have a matching after image. Open `.artifacts/chart-comparisons/notebooks/gallery.md` for the complete set and use `comparison-report.json` to find missing, added, or dimension-changing outputs.
+
 ## Comparing against the baselines
 
 Compare intentional refactors with `PYTHONPATH=src:. python scripts/compare_charts.py --generate`. Dimensions are always gated. What the changed-pixel fraction means depends on which Matplotlib drew each image, which the script reads out of the PNG `Software` chunk.
