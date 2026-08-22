@@ -2,6 +2,7 @@ import tempfile
 import unittest
 from dataclasses import FrozenInstanceError
 from pathlib import Path
+from unittest.mock import patch
 
 import matplotlib.pyplot as plt
 from PIL import Image
@@ -40,6 +41,11 @@ class ChartStyleConstantsTest(unittest.TestCase):
         self.assertEqual(frame.plot_bounds, (0.09, 0.96, 0.80, 0.17))
         self.assertEqual(len(CATEGORICAL_COLORS), 7)
         self.assertTrue(NOTEBOOK_AXES.axis_below)
+
+        with patch("chart_style.plt.subplots", wraps=plt.subplots) as subplots:
+            with chart_canvas(frame) as (fig, _):
+                self.assertEqual(subplots.call_args.kwargs["dpi"], 120)
+                plt.close(fig)
 
 
 class ChartFramingTest(unittest.TestCase):

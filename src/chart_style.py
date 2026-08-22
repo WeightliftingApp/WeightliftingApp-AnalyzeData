@@ -206,7 +206,11 @@ EDITORIAL_RC = {
 def chart_canvas(frame: ChartFrame) -> Iterator[Tuple[Figure, Axes]]:
     """Yield a paper-toned figure and one editorial plot panel."""
     with plt.rc_context(EDITORIAL_RC):
-        fig, ax = plt.subplots(figsize=frame.figsize, facecolor=PALETTE.paper)
+        fig, ax = plt.subplots(
+            figsize=frame.figsize,
+            dpi=frame.dpi,
+            facecolor=PALETTE.paper,
+        )
         ax.set_facecolor(PALETTE.panel)
         frame_figure(fig, frame)
         try:
@@ -232,6 +236,7 @@ def stacked_canvas(
             len(height_ratios),
             1,
             figsize=frame.figsize,
+            dpi=frame.dpi,
             sharex=True,
             gridspec_kw={"height_ratios": list(height_ratios), "hspace": hspace},
             facecolor=PALETTE.paper,
