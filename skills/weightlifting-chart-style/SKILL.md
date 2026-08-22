@@ -18,7 +18,7 @@ Create a self-explanatory analytical card without changing what the analysis say
 
 Use `chart_canvas` with the closest frame preset. Use `add_header`, `style_axes`, `add_footer`, and `save_chart` for framing. Keep calculations and chart-specific marks in the generator.
 
-Use the shared palette by meaning, not by convenience. Neutral marks provide context. One restrained color should carry each important state. Annotate the latest scan, new frontier point, or other claim close to its mark.
+Use the shared palette by meaning, not by convenience. Neutral marks provide context. Use `PALETTE.frontier` for an established Pareto frontier and `PALETTE.advance` for its new checkpoint. Use positive and negative colors for trend residuals, and cut and bulk colors for phase paths and phase labels. Annotate the latest scan, new frontier point, or other claim close to its mark.
 
 The footer must explain the model and reading direction in plain terms. A reader should understand trimming, contour assumptions, trend residuals, or Pareto dominance from the image alone.
 
@@ -31,6 +31,7 @@ These rules are non-negotiable during a style migration:
 - Keep dates, sample counts, workout counts, attempt counts, and fit statistics.
 - Keep direct labels, annotations, legends, and model footers. Reword only when the new text is at least as precise.
 - Keep output filename, pixel dimensions, aspect ratio, and DPI unless the task documents an improvement.
+- During a migration, render the existing source data. Never replace it with a synthetic history merely to make the generator run. Synthetic data belongs in focused tests or a clearly labeled new-chart prototype.
 - Do not replace a domain calculation with visual shorthand.
 - Do not churn notebooks or unrelated generators.
 - Never commit source personal data, generated outputs, baseline images, or comparison artifacts.

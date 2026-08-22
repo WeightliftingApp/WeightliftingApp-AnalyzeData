@@ -73,5 +73,6 @@ The contact sheets and diff images are under `.artifacts/chart-comparisons`. Bot
 
 ## Next steps
 
-- The coordinator should review the draft skill and then run its full evaluation loop.
+- A paired Superset evaluation ran all three prompts with and without the skill. The skill passed 18 of 18 objective checks; the baseline passed 16 of 18. It prevented synthetic data substitution during a DEXA migration and preserved the shared blue frontier and red advance semantics on a new deadlift card. Mean wall time was effectively unchanged.
+- The installed `skill-creator` package lacks its documented benchmark aggregation and review-viewer scripts. Raw outputs, grading files, timing, paired charts, and a direct benchmark remain under the ignored `skills/weightlifting-chart-style-workspace/iteration-1` directory.
 - If the later DEXA report follow-up lands first, rebase or cherry-pick this chart commit and rerun the full tests plus `scripts/compare_charts.py --generate`.
