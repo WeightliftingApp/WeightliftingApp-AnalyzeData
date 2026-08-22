@@ -39,4 +39,4 @@ Chart generators still own data selection, marks, annotations, axis limits, unit
 
 A style migration must preserve every plotted observation and frontier point, axis meaning and units, date and count metadata, direct annotations, legends, and model footers. Preserve pixel dimensions and DPI unless the task records a specific reason to change them.
 
-Compare intentional refactors with `PYTHONPATH=src:. python scripts/compare_charts.py --generate`. Review the contact sheets and diffs under `.artifacts/chart-comparisons`, then record dimensions and coarse pixel metrics. Small rasterization drift is acceptable. Missing labels, shifted meaning, changed limits, or missing points are not.
+Compare intentional refactors with `PYTHONPATH=src:. python scripts/compare_charts.py --generate`. The command fails if dimensions differ or if the fraction of pixels with luminance drift over 8 exceeds `0.01`. Review the contact sheets and diffs under `.artifacts/chart-comparisons` even when that broad check passes. The automated gate catches large raster changes, but it cannot detect a missing claim, mislabeled state, changed limit, or lost point.

@@ -28,6 +28,7 @@ CHARTS = (
 )
 LABEL_HEIGHT = 28
 GAP = 8
+MAX_CHANGED_PIXEL_FRACTION = 0.01
 
 
 def report_path(path: Path) -> str:
@@ -101,6 +102,26 @@ def coarse_metrics(
     )
 
 
+def evaluate_comparison(
+    dimensions_match: bool,
+    changed_pixel_fraction: float,
+    threshold: float = MAX_CHANGED_PIXEL_FRACTION,
+) -> Dict[str, object]:
+    """Apply the broad regression gate while leaving meaning to visual review."""
+    failures = []
+    if not dimensions_match:
+        failures.append("dimensions differ")
+    if changed_pixel_fraction > threshold:
+        failures.append(
+            f"changed-pixel fraction {changed_pixel_fraction:.6f} exceeds {threshold:.6f}"
+        )
+    return {
+        "passed": not failures,
+        "max_changed_pixel_fraction": threshold,
+        "failures": failures,
+    }
+
+
 def contact_sheet(
     before: Image.Image, after: Image.Image, filename: str
 ) -> Image.Image:
@@ -138,12 +159,16 @@ def compare_pair(
     diff_path = output_dir / f"{stem}-diff.png"
     contact_sheet(before, after, before_path.name).save(contact_path)
     difference.save(diff_path)
+    dimensions_match = before.size == after.size
     return {
         "chart": before_path.name,
         "before": image_metadata(before_path),
         "after": image_metadata(after_path),
-        "dimensions_match": before.size == after.size,
+        "dimensions_match": dimensions_match,
         "metrics": metrics,
+        "broad_check": evaluate_comparison(
+            dimensions_match, metrics["changed_pixel_fraction_over_8"],
+        ),
         "contact_sheet": report_path(contact_path),
         "diff_image": report_path(diff_path),
     }
@@ -176,7 +201,12 @@ def compare_all(
         if not after_path.is_file():
             raise FileNotFoundError(f"Missing post-migration image: {after_path}")
         comparisons.append(compare_pair(before_path, after_path, output_dir))
-    report = {"comparisons": comparisons}
+    report = {
+        "broad_check_passed": all(
+            comparison["broad_check"]["passed"] for comparison in comparisons
+        ),
+        "comparisons": comparisons,
+    }
     report_path = output_dir / "comparison-report.json"
     report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     return report
@@ -204,6 +234,8 @@ def main(argv: List[str] | None = None) -> None:
         args.baseline_dir, args.after_dir, args.output_dir, args.charts,
     )
     print(json.dumps(report, indent=2, sort_keys=True))
+    if not report["broad_check_passed"]:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

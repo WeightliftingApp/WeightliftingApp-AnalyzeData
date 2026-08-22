@@ -11,6 +11,7 @@
 - The baseline directory arrived untracked. Adding `.artifacts/` to `.gitignore` protects the baselines and every generated comparison without moving or rewriting them.
 - The weight log emits two `openpyxl` warnings about unsupported workbook extensions during read-only loading. Both generators still complete, and the loader does not save the workbook.
 - The refactored images have slight antialiasing drift around text and contour labels. Visual inspection found no missing or shifted content. Coarse metrics stay below a 0.004 changed-pixel fraction at a per-pixel threshold of 8.
+- The comparison command now fails when dimensions differ or the changed-pixel fraction exceeds `0.01`. A passing result still requires visual review because pixel metrics cannot judge chart meaning.
 
 ## Ambiguities
 
@@ -24,6 +25,8 @@
 - The module exposes two frame presets and two axis presets instead of a long list of layout arguments at each call site. This keeps the interface small while preserving the exact portrait and wide-card geometry.
 - Bench loading and rendering now have separate functions. Tests can render a complete frontier card from synthetic attempts without reading personal files.
 - Semantic tests inspect Matplotlib artists and text. Pixel tests cover dimensions and broad drift, not exact raster output.
+- Residual colors follow the residual sign. Green means zero or positive, and red means negative. The latest interval-efficiency annotation uses cut blue or bulk red from its phase.
+- The time footer derives its final scan number from `len(points)` instead of a fixed upper bound.
 
 ## Rejected alternatives
 
@@ -42,10 +45,10 @@ PYTHONPATH=src:. python scripts/compare_charts.py --generate
 
 Results:
 
-| Chart | Before | After | Mean absolute channel difference | RMS difference | Changed pixels over 8 |
-| --- | --- | --- | ---: | ---: | ---: |
-| DEXA lean mass vs bodyweight | 2000×1600 | 2000×1600 | 0.2350 | 5.0362 | 0.003999 |
-| Bench frontier update | 2400×1350 | 2400×1350 | 0.2058 | 4.5074 | 0.003890 |
+| Chart | Before | After | Mean absolute channel difference | RMS difference | Changed pixels over 8 | Broad check |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| DEXA lean mass vs bodyweight | 2000×1600 | 2000×1600 | 0.2350 | 5.0362 | 0.003999 | Pass |
+| Bench frontier update | 2400×1350 | 2400×1350 | 0.2058 | 4.5074 | 0.003890 | Pass |
 
 The contact sheets and diff images are under `.artifacts/chart-comparisons`. Both side-by-side sheets retain the same points, annotations, metadata, axes, legends, and footers. The directory remains ignored.
 
@@ -67,9 +70,11 @@ The contact sheets and diff images are under `.artifacts/chart-comparisons`. Bot
 - Headers reject a third metadata row instead of overlapping text.
 - Saving creates missing parent directories and closes the figure.
 - The comparison tool normalizes unequal dimensions onto equal white canvases before measuring and fails clearly when either image is missing.
+- Comparison tests cover a small-drift pass, a large-drift failure, and a dimension-mismatch failure.
 - The bench renderer still requires exactly one newly added frontier coordinate and rejects an update point that is not Pareto-optimal.
 - Trailing bodyweight requires a valid weigh-in on every day in the seven-day window. Missing calendar days cannot pull older measurements into the average.
-- Chart semantic tests cover dynamic set labels, frontier counts, DEXA scan labels, trend and contour artists, axes, legend text, and footer claims.
+- Chart semantic tests assert exact fixture counts for attempts, frontier points, scan marks, residual bars, phase arrows, and scan-number labels.
+- A synthetic latest bulk with a negative trend residual verifies a red residual bar, red residual annotation, and red bulk-efficiency annotation.
 
 ## Next steps
 

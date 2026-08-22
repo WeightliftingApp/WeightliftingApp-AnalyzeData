@@ -246,6 +246,15 @@ def plot_lean_mass_vs_bodyweight(totals: pd.DataFrame, output_path: Path) -> Non
         for sequence, (_, point) in enumerate(points.iterrows(), start=1):
             is_latest = point["date"] == latest["date"]
             is_positive_outlier = point["trend_residual_lb"] > 0.75
+            residual_color = (
+                PALETTE.positive
+                if point["trend_residual_lb"] >= 0
+                else PALETTE.negative
+            )
+            efficiency_color = {
+                "CUT": PALETTE.cut,
+                "BULK": PALETTE.bulk,
+            }.get(point["phase"], PALETTE.muted)
             ax.text(
                 point["weight_lb"],
                 point["lean_soft_tissue_lb"] - 0.07,
@@ -289,7 +298,7 @@ def plot_lean_mass_vs_bodyweight(totals: pd.DataFrame, output_path: Path) -> Non
                     va="bottom",
                     fontsize=11.2,
                     family=MONO_FONT,
-                    color=PALETTE.positive,
+                    color=residual_color,
                     fontweight="bold",
                     bbox=label_backing,
                     zorder=5,
@@ -313,7 +322,7 @@ def plot_lean_mass_vs_bodyweight(totals: pd.DataFrame, output_path: Path) -> Non
                     va="top",
                     fontsize=8.8,
                     family=MONO_FONT,
-                    color=PALETTE.cut,
+                    color=efficiency_color,
                     fontweight="bold",
                     bbox=label_backing,
                     zorder=5,

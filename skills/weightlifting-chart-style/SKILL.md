@@ -46,4 +46,4 @@ For the established cards, run:
 PYTHONPATH=src:. python scripts/compare_charts.py --generate
 ```
 
-Inspect the side-by-side sheets and diff images under `.artifacts/chart-comparisons`. Report dimensions and coarse metrics, but do not require exact pixel identity after a deliberate refactor. Treat a missing point, label, unit, legend entry, or footer claim as a failure even when the image looks polished.
+Inspect the side-by-side sheets and diff images under `.artifacts/chart-comparisons`. The comparison command fails on a dimension mismatch or a changed-pixel fraction over `0.01`. Passing this broad gate does not prove semantic correctness. Treat a missing point, label, unit, legend entry, state color, or footer claim as a failure even when the image looks polished.
