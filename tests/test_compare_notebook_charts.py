@@ -20,7 +20,9 @@ class CompareNotebookImagesTest(unittest.TestCase):
             Image.new("RGB", (20, 10), "white").save(baseline / relative)
             Image.new("RGB", (20, 10), "black").save(after / relative)
 
-            report = compare_notebook_images(baseline, after, output)
+            report = compare_notebook_images(
+                baseline, after, output, replacements={}
+            )
 
             self.assertTrue(report["all_images_paired"])
             self.assertEqual(report["paired_count"], 1)
@@ -44,11 +46,36 @@ class CompareNotebookImagesTest(unittest.TestCase):
             Image.new("RGB", (5, 5)).save(baseline / "missing.png")
             Image.new("RGB", (5, 5)).save(after / "added.png")
 
-            report = compare_notebook_images(baseline, after, output)
+            report = compare_notebook_images(
+                baseline, after, output, replacements={}
+            )
 
             self.assertFalse(report["all_images_paired"])
             self.assertEqual(report["missing_after"], ["missing.png"])
             self.assertEqual(report["added_after"], ["added.png"])
+
+    def test_replacement_can_cover_a_removed_stale_output(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            baseline = root / "before"
+            after = root / "after"
+            output = root / "comparison"
+            baseline.mkdir()
+            after.mkdir()
+            Image.new("RGB", (5, 5)).save(baseline / "stale.png")
+            Image.new("RGB", (5, 5)).save(after / "current.png")
+
+            report = compare_notebook_images(
+                baseline,
+                after,
+                output,
+                replacements={Path("stale.png"): Path("current.png")},
+            )
+
+            self.assertTrue(report["all_images_paired"])
+            self.assertEqual(report["paired_count"], 1)
+            self.assertEqual(report["replacements"], {"stale.png": "current.png"})
+            self.assertEqual(report["comparisons"][0]["after_image"], "current.png")
 
 
 if __name__ == "__main__":

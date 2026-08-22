@@ -61,7 +61,7 @@ jupyter nbconvert --to markdown \
 PYTHONPATH=src:. .venv/bin/python scripts/compare_notebook_charts.py
 ```
 
-The gallery command requires every baseline image to have a matching after image. Open `.artifacts/chart-comparisons/notebooks/gallery.md` for the complete set and use `comparison-report.json` to find missing, added, or dimension-changing outputs.
+The gallery command requires every baseline image to have a matching after image or a documented replacement. `analyze_users` contains one stale histogram output from an older cell; the gallery maps that baseline to the current migrated histogram instead of preserving a duplicate output in the notebook. Open `.artifacts/chart-comparisons/notebooks/gallery.md` for the complete set and use `comparison-report.json` to find replacements, missing images, additions, or dimension changes.
 
 ## Comparing against the baselines
 

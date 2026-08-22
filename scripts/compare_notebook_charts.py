@@ -37,6 +37,15 @@ OUTPUT_DIR = REPO_ROOT / ".artifacts" / "chart-comparisons" / "notebooks"
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg"}
 OVERVIEW_COLUMNS = 3
 OVERVIEW_CELL = (520, 340)
+DEFAULT_REPLACEMENTS = {
+    # analyze_users carried a stale histogram output in cell 3 as well as the
+    # current histogram in cell 4. Re-execution removes the stale output. Pair
+    # both baselines with the one migrated histogram so the gallery still
+    # shows what replaced every preserved image.
+    Path("analyze_users_files/analyze_users_3_2.png"): Path(
+        "analyze_users_files/analyze_users_4_0.png"
+    ),
+}
 
 
 def image_paths(root: Path) -> set[Path]:
@@ -72,19 +81,31 @@ def build_overview(sheet_paths: list[Path], output_path: Path) -> None:
 
 
 def compare_notebook_images(
-    baseline_dir: Path, after_dir: Path, output_dir: Path
+    baseline_dir: Path,
+    after_dir: Path,
+    output_dir: Path,
+    *,
+    replacements: dict[Path, Path] | None = None,
 ) -> dict[str, object]:
     """Pair extracted outputs by notebook, cell, and output filename."""
     before_paths = image_paths(baseline_dir)
     after_paths = image_paths(after_dir)
-    missing_after = sorted(str(path) for path in before_paths - after_paths)
-    added_after = sorted(str(path) for path in after_paths - before_paths)
+    replacements = DEFAULT_REPLACEMENTS if replacements is None else replacements
+    resolved_paths = {path: path for path in before_paths & after_paths}
+    applied_replacements = {}
+    for before_path, after_path in replacements.items():
+        if before_path in before_paths and after_path in after_paths:
+            resolved_paths[before_path] = after_path
+            applied_replacements[str(before_path)] = str(after_path)
+    used_after_paths = set(resolved_paths.values())
+    missing_after = sorted(str(path) for path in before_paths - resolved_paths.keys())
+    added_after = sorted(str(path) for path in after_paths - used_after_paths)
     comparisons = []
     sheet_paths = []
 
-    for relative_path in sorted(before_paths & after_paths):
+    for relative_path, after_relative_path in sorted(resolved_paths.items()):
         before_path = baseline_dir / relative_path
-        after_path = after_dir / relative_path
+        after_path = after_dir / after_relative_path
         with Image.open(before_path) as before_source, Image.open(
             after_path
         ) as after_source:
@@ -96,8 +117,9 @@ def compare_notebook_images(
         contact_sheet(before, after, str(relative_path)).save(sheet_path)
         sheet_paths.append(sheet_path)
         comparisons.append(
-            {
-                "image": str(relative_path),
+                {
+                    "image": str(relative_path),
+                    "after_image": str(after_relative_path),
                 "before": image_metadata(before_path),
                 "after": image_metadata(after_path),
                 "dimensions_match": before.size == after.size,
@@ -112,6 +134,7 @@ def compare_notebook_images(
         "paired_count": len(comparisons),
         "missing_after": missing_after,
         "added_after": added_after,
+        "replacements": applied_replacements,
         "all_images_paired": not missing_after and not added_after,
         "comparisons": comparisons,
     }
