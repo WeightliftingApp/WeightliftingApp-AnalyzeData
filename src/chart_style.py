@@ -222,12 +222,17 @@ def chart_canvas(frame: ChartFrame) -> Iterator[Tuple[Figure, Axes]]:
 
 @contextmanager
 def stacked_canvas(
-    frame: ChartFrame, height_ratios: Sequence[float], hspace: float,
+    frame: ChartFrame,
+    height_ratios: Sequence[float],
+    hspace: float,
+    *,
+    sharex: bool = True,
 ) -> Iterator[Tuple[Figure, Tuple[Axes, ...]]]:
-    """Yield a paper-toned figure and a column of panels sharing one x axis.
+    """Yield a paper-toned figure and a column of editorial panels.
 
     Charts that measure two different quantities against the same x quantity
-    stack panels instead of crowding one panel with a second y axis.
+    stack panels instead of crowding one panel with a second y axis. Set
+    ``sharex=False`` when the panels use different x quantities.
     """
     if len(height_ratios) < 2:
         raise ValueError("a stacked canvas needs at least two panels")
@@ -237,7 +242,7 @@ def stacked_canvas(
             1,
             figsize=frame.figsize,
             dpi=frame.dpi,
-            sharex=True,
+            sharex=sharex,
             gridspec_kw={"height_ratios": list(height_ratios), "hspace": hspace},
             facecolor=PALETTE.paper,
         )

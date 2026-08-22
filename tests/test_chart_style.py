@@ -18,6 +18,7 @@ from chart_style import (
     chart_canvas,
     notebook_frame,
     save_chart,
+    stacked_canvas,
     style_axes,
     style_legend,
 )
@@ -94,6 +95,18 @@ class ChartFramingTest(unittest.TestCase):
                 tuple(round(value, 4) for value in legend.get_frame().get_facecolor()),
                 (0.9804, 0.9725, 0.949, 0.96),
             )
+            plt.close(fig)
+
+    def test_stacked_canvas_can_keep_unrelated_x_axes_independent(self):
+        frame = notebook_frame((8, 6))
+        with stacked_canvas(
+            frame, (2, 1), 0.25, sharex=False
+        ) as (fig, axes):
+            axes[0].set_xlim(2020, 2026)
+            axes[1].set_xlim(-5, 10)
+
+            self.assertEqual(axes[0].get_xlim(), (2020, 2026))
+            self.assertEqual(axes[1].get_xlim(), (-5, 10))
             plt.close(fig)
 
     def test_header_rejects_more_metadata_than_the_frame_can_place(self):
