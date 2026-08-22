@@ -11,8 +11,11 @@ from chart_style import (
     MONO_FONT,
     PALETTE,
     PARETO_AXES,
+    AnnotationKind,
     add_footer,
     add_header,
+    annotate_point,
+    plot_estimate_interval,
     save_chart,
     stacked_canvas,
     style_axes,
@@ -81,24 +84,14 @@ def plot_muscle_gain_estimate(
             linewidth=2.5,
             label="ALL-SCAN TIME TREND",
         )
-        upper.scatter(
-            [dates.iloc[-1]],
-            [estimate.adjusted_lean_soft_tissue_lb[-1]],
-            s=105,
-            color=PALETTE.latest,
-            edgecolor="none",
-            zorder=4,
-        )
-        upper.annotate(
-            f"LATEST  {dates.iloc[-1]:%Y.%m.%d}",
-            (dates.iloc[-1], estimate.adjusted_lean_soft_tissue_lb[-1]),
+        annotate_point(
+            upper,
+            dates.iloc[-1],
+            estimate.adjusted_lean_soft_tissue_lb[-1],
+            f"{dates.iloc[-1]:%Y.%m.%d}",
+            kind=AnnotationKind.LATEST,
             xytext=(-8, 15),
-            textcoords="offset points",
             ha="right",
-            fontsize=9.5,
-            family=MONO_FONT,
-            color=PALETTE.latest,
-            fontweight="bold",
         )
         upper.set_ylabel(
             "LEAN SOFT TISSUE AT COMMON WEIGHT (LB)",
@@ -115,26 +108,24 @@ def plot_muscle_gain_estimate(
         raw_change = estimate.earliest_to_latest.lean_soft_tissue_change_lb
         raw_scan_error = np.sqrt(2.0) * estimate.assumed_scan_error_sd_lb
         raw_change_95 = 1.96 * raw_scan_error
-        lower.errorbar(
-            raw_change,
-            1,
-            xerr=raw_change_95,
-            fmt="D",
+        plot_estimate_interval(
+            lower,
+            estimate=raw_change,
+            low=raw_change - raw_change_95,
+            high=raw_change + raw_change_95,
+            y=1,
+            marker="D",
             markersize=7,
             color=PALETTE.reference,
             capsize=4,
             linewidth=2,
         )
-        lower.errorbar(
-            estimate.muscle_gain_median_lb,
-            0,
-            xerr=np.array(
-                [
-                    [estimate.muscle_gain_median_lb - estimate.muscle_gain_low_95_lb],
-                    [estimate.muscle_gain_high_95_lb - estimate.muscle_gain_median_lb],
-                ]
-            ),
-            fmt="o",
+        plot_estimate_interval(
+            lower,
+            estimate=estimate.muscle_gain_median_lb,
+            low=estimate.muscle_gain_low_95_lb,
+            high=estimate.muscle_gain_high_95_lb,
+            y=0,
             markersize=9,
             color=PALETTE.frontier,
             capsize=5,
@@ -160,25 +151,23 @@ def plot_muscle_gain_estimate(
         padding = max(0.75, 0.06 * (interval_high - interval_low))
         lower.set_xlim(interval_low - padding, interval_high + padding)
         lower.set_ylim(-0.55, 1.55)
-        lower.annotate(
+        annotate_point(
+            lower,
+            raw_change,
+            1,
             f"{raw_change:+.1f} LB LEAN",
-            (raw_change, 1),
+            kind=AnnotationKind.REFERENCE,
             xytext=(7, 9),
-            textcoords="offset points",
-            family=MONO_FONT,
-            fontsize=9,
-            color=PALETTE.reference,
-            fontweight="bold",
+            mark=False,
         )
-        lower.annotate(
+        annotate_point(
+            lower,
+            estimate.muscle_gain_median_lb,
+            0,
             f"{headline:+.1f} LB  /  95% {low:+.1f} TO {high:+.1f}",
-            (estimate.muscle_gain_median_lb, 0),
+            kind=AnnotationKind.ESTIMATE,
             xytext=(7, 9),
-            textcoords="offset points",
-            family=MONO_FONT,
-            fontsize=9,
-            color=PALETTE.frontier,
-            fontweight="bold",
+            mark=False,
         )
         for axis in (upper, lower):
             style_axes(axis, PARETO_AXES)
