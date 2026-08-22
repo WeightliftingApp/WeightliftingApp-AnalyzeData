@@ -1,7 +1,7 @@
 # Canonical training dataset
 
 `src/training_dataset.py` turns a Weightlifting App `.wld` export into three flat
-pandas DataFrames — one row per workout, per exercise instance, and per set — so
+pandas DataFrames (one row per workout, per exercise instance, and per set) so
 an analysis can filter and group instead of walking the nested
 `WLD -> Workout -> Exercise -> Set` object graph and re-deriving display names,
 calendar weeks, and per-exercise bests.
@@ -44,15 +44,18 @@ loaded `WLD` instance, which is useful when a notebook loads several exports.
   `"{workout_id}:{exercise_index}"` and `set_id` is `"{exercise_id}:{set_index}"`,
   where the indexes are positions within the source record. Each frame also
   carries denormalized identity columns, so most analyses need no join.
-- **Ordering.** Rows are sorted oldest first — workouts by `(date, workout_id)`,
-  exercises and sets by their position inside the workout — and the index is a
-  plain `RangeIndex`.
+- **Ordering.** Rows are sorted oldest first: workouts by `(date, workout_id)`,
+  exercises and sets by their position inside the workout. The index is a plain
+  `RangeIndex`.
+- **Validation.** A workout uuid must be present and unique, because
+  `exercise_id` and `set_id` are derived from it. Loading rejects an export
+  that breaks either rule instead of emitting colliding identifiers.
 - **Types.** Source numerics are `float64` so missing entries stay `NaN` and
   plot without masked-array handling; counts computed here, which are never
   missing, are `int64`. Columns and dtypes are identical whether the export has
   2,281 workouts or none.
 
-## `workouts` — one row per session
+## `workouts`: one row per session
 
 | Column | Type | Meaning |
 | --- | --- | --- |
@@ -65,7 +68,7 @@ loaded `WLD` instance, which is useful when a notebook loads several exports.
 | `set_count` | int64 | Sets across all of the session's exercises. |
 | `volume` | float64 | Sum of recorded set volumes; `NaN` if none were recorded. |
 
-## `exercises` — one row per exercise instance
+## `exercises`: one row per exercise instance
 
 | Column | Type | Meaning |
 | --- | --- | --- |
@@ -82,7 +85,7 @@ loaded `WLD` instance, which is useful when a notebook loads several exports.
 | `volume` | float64 | Sum of recorded set volumes; `NaN` if none. |
 | `best_one_rm` | float64 | Highest recorded estimated 1RM; `NaN` if none. |
 
-## `sets` — one row per set
+## `sets`: one row per set
 
 Identity columns `set_id`, `exercise_id`, `workout_id`, `exercise_index`,
 `set_index`, `date`, `week_of`, `name`, `iteration`, `display_name`, `category`,
@@ -101,7 +104,7 @@ and `style` carry the same meanings as above.
 | `rpe`, `rir` | float64 | Recorded effort ratings. |
 | `custom` | object | Free-text set value, or `None`. |
 
-## `bodyweight` — one row per week
+## `bodyweight`: one row per week
 
 Loaded only when `bodyweight_path` is given; otherwise the frame is empty with
 these columns. It accepts the `Week of`/`Average` headers written by
@@ -119,13 +122,26 @@ spreadsheet evaluate to `0`.
 
 ## Errors
 
-- Missing file → `FileNotFoundError`.
-- File that is not a usable export (bad JSON, or a missing top-level section) →
-  `ValueError` naming the problem.
-- Workout date the schema cannot parse → `ValueError` naming the date.
-- Bodyweight CSV without usable headers → `ValueError` listing what was expected.
+Every failure below raises `ValueError` except the missing file. Each message
+names the record at fault, and the file too when the loader was given a path.
+
+- Missing file: `FileNotFoundError`.
+- File that is not JSON, or whose top level is not an object (`null`, a list).
+- A missing or null top-level section (`typeList`, `settings`, `user`,
+  `workouts`), or one with the wrong shape, such as `"workouts": {}`.
+- A null or non-object record anywhere in the export, such as a null workout, a
+  null `exercises` or `sets` list, or a null entry inside one. The message names
+  the position, for example `workout 0 exercise 2 set 1 must be an object,
+  found null`.
+- A workout with no uuid, or two workouts sharing one uuid. The message names
+  the workout index, its recorded time, and the repeated uuid.
+- A workout date the schema cannot parse. The message names the date.
+- A bodyweight CSV without usable headers. The message lists what was expected.
 
 ## Tests
+
+`tests/test_training_dataset.py` runs under the repository's usual test setup.
+Without an editable install, `src` needs to be on the path:
 
 ```bash
 PYTHONPATH=.:src python -m unittest discover -s tests

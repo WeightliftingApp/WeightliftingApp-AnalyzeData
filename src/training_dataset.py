@@ -23,9 +23,11 @@ value or an aggregate of source values, and absent values stay missing.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from datetime import date as date_type, datetime
 from pathlib import Path
-from typing import Any, Optional, Sequence, Union
+from typing import Any, Iterable, Optional, Sequence, Union
 
 import pandas as pd
 
@@ -145,6 +147,8 @@ class TrainingDataset:
         source_path: Optional[PathLike] = None,
     ) -> "TrainingDataset":
         """Normalize an already-loaded :class:`~schema.WLD` instance."""
+        _validate_workout_ids(wld.workouts, source_path)
+
         workout_rows: list[dict[str, Any]] = []
         exercise_rows: list[dict[str, Any]] = []
         set_rows: list[dict[str, Any]] = []
@@ -254,15 +258,137 @@ def load_training_dataset(
     Raises ``FileNotFoundError`` when a path is missing and ``ValueError`` when
     a file exists but is not a usable export.
     """
+    with open(wld_path, "r") as export:
+        try:
+            payload = json.load(export)
+        except ValueError as error:
+            raise ValueError(
+                f"{wld_path} is not a valid .wld export: {error}"
+            ) from error
+
+    _validate_payload(payload, wld_path)
     try:
-        wld = WLD(file_path=str(wld_path))
-    except KeyError as error:
+        wld = WLD(**payload)
+    except (KeyError, TypeError, AttributeError) as error:
+        # Anything the structural check above did not anticipate still reaches
+        # the caller as a ValueError naming the file rather than as a raw
+        # KeyError from deep inside the schema classes.
         raise ValueError(
-            f"{wld_path} is not a valid .wld export: missing key {error}"
+            f"{wld_path} is not a valid .wld export: {error}"
         ) from error
     return TrainingDataset.from_wld(
         wld, bodyweight_path=bodyweight_path, source_path=wld_path
     )
+
+
+_REQUIRED_SECTIONS = ("typeList", "settings", "user", "workouts")
+
+
+def _describe(value: Any) -> str:
+    """Name a malformed value the way the error messages should read."""
+    if value is None:
+        return "null"
+    return {
+        bool: "a boolean",
+        int: "a number",
+        float: "a number",
+        str: "a string",
+        list: "a list",
+        dict: "an object",
+    }.get(type(value), type(value).__name__)
+
+
+def _validate_payload(payload: Any, source: PathLike) -> None:
+    """Reject malformed exports with a message naming the offending record.
+
+    The schema classes assume well formed input, so a null section or a null
+    set otherwise surfaces as a bare ``TypeError`` from inside a list
+    comprehension. Checking the shape first turns each of those into a
+    ``ValueError`` that says which record is wrong.
+    """
+
+    def invalid(detail: str) -> ValueError:
+        return ValueError(f"{source} is not a valid .wld export: {detail}")
+
+    if not isinstance(payload, dict):
+        raise invalid(
+            f"expected an object at the top level, found {_describe(payload)}"
+        )
+
+    for section in _REQUIRED_SECTIONS:
+        if section not in payload:
+            raise invalid(f"missing the '{section}' section")
+        if payload[section] is None:
+            raise invalid(f"the '{section}' section is null")
+
+    for section in ("settings", "user"):
+        if not isinstance(payload[section], dict):
+            raise invalid(
+                f"'{section}' must be an object, found {_describe(payload[section])}"
+            )
+    if not isinstance(payload["typeList"], dict) or "list" not in payload["typeList"]:
+        raise invalid("'typeList' must be an object containing a 'list' entry")
+    if not isinstance(payload["workouts"], list):
+        raise invalid(
+            f"'workouts' must be a list, found {_describe(payload['workouts'])}"
+        )
+
+    for index, workout in enumerate(payload["workouts"]):
+        if not isinstance(workout, dict):
+            raise invalid(
+                f"workout {index} must be an object, found {_describe(workout)}"
+            )
+        exercises = workout.get("exercises", [])
+        if not isinstance(exercises, list):
+            raise invalid(
+                f"workout {index} has an invalid 'exercises' value: expected a "
+                f"list, found {_describe(exercises)}"
+            )
+        for exercise_index, exercise in enumerate(exercises):
+            label = f"workout {index} exercise {exercise_index}"
+            if not isinstance(exercise, dict):
+                raise invalid(
+                    f"{label} must be an object, found {_describe(exercise)}"
+                )
+            sets = exercise.get("sets", [])
+            if not isinstance(sets, list):
+                raise invalid(
+                    f"{label} has an invalid 'sets' value: expected a list, "
+                    f"found {_describe(sets)}"
+                )
+            for set_index, set_record in enumerate(sets):
+                if not isinstance(set_record, dict):
+                    raise invalid(
+                        f"{label} set {set_index} must be an object, found "
+                        f"{_describe(set_record)}"
+                    )
+
+
+def _validate_workout_ids(workouts: Iterable[Any], source: Optional[PathLike]) -> None:
+    """Require a present, unique uuid on every workout.
+
+    Exercise and set identifiers are built from the workout uuid, so a missing
+    or repeated uuid would silently produce colliding ``exercise_id`` and
+    ``set_id`` values instead of failing.
+    """
+    prefix = "" if source is None else f"{source}: "
+    first_seen: dict[str, int] = {}
+    for index, workout in enumerate(workouts):
+        workout_id = workout.uuid
+        recorded = f"recorded {workout.date:%Y-%m-%d %H:%M}"
+        if not isinstance(workout_id, str) or not workout_id.strip():
+            raise ValueError(
+                f"{prefix}workout {index} ({recorded}) has no uuid, but exercise "
+                "and set identifiers are derived from it"
+            )
+        if workout_id in first_seen:
+            raise ValueError(
+                f"{prefix}workout uuid {workout_id!r} is used by both workout "
+                f"{first_seen[workout_id]} and workout {index} ({recorded}); "
+                "workout uuids must be unique because exercise and set "
+                "identifiers are derived from them"
+            )
+        first_seen[workout_id] = index
 
 
 def _week_of(date: pd.Timestamp) -> pd.Timestamp:
@@ -306,6 +432,37 @@ def _frame(
     return frame.reset_index(drop=True)
 
 
+def _to_timestamp(value: Any) -> Any:
+    """Parse one cell into a ``Timestamp``, or ``NaT`` when it is not a date."""
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return pd.NaT
+        value = text
+    elif not isinstance(value, (datetime, date_type, pd.Timestamp)):
+        return pd.NaT
+    try:
+        return pd.Timestamp(value)
+    except (ValueError, TypeError, OverflowError):
+        return pd.NaT
+
+
+def _parse_dates(values: pd.Series) -> pd.Series:
+    """Parse a date column one cell at a time, preserving mixed formats.
+
+    Deliberately avoids ``pd.to_datetime`` on the whole column: pandas 2 infers
+    a single format from the first entry and coerces every other layout in the
+    column to ``NaT``, and the ``format="mixed"`` escape hatch does not exist
+    before pandas 2.0. Parsing per cell behaves the same way on pandas 1.4 and
+    on pandas 2.x, and a sheet is small enough that the cost does not matter.
+    """
+    return pd.Series(
+        [_to_timestamp(value) for value in values],
+        index=values.index,
+        dtype="datetime64[ns]",
+    )
+
+
 def _load_bodyweight(path: PathLike) -> pd.DataFrame:
     """Read a weekly bodyweight CSV into ``week_of``/``bodyweight`` columns."""
     frame = pd.read_csv(path)
@@ -324,11 +481,7 @@ def _load_bodyweight(path: PathLike) -> pd.DataFrame:
         )
 
     frame = frame.loc[:, list(BODYWEIGHT_COLUMNS)].copy()
-    # ``format="mixed"`` parses each row on its own terms, so one unusual row
-    # cannot silently coerce the rest of the column to NaT.
-    frame["week_of"] = pd.to_datetime(
-        frame["week_of"], errors="coerce", format="mixed"
-    ).dt.normalize()
+    frame["week_of"] = _parse_dates(frame["week_of"]).dt.normalize()
     frame["bodyweight"] = pd.to_numeric(frame["bodyweight"], errors="coerce")
     # A formula cell without a measurement evaluates to 0, which is not a
     # bodyweight; it stays missing rather than distorting joins or charts.

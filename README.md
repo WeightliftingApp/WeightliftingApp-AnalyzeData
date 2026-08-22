@@ -31,7 +31,7 @@ python -m pip install -e ".[notebooks]"
 Run any of the `.ipynb` Jupyter notebooks in the `src/` folder or create your own.
 
 For analyses that would otherwise walk the nested export structure, load the
-canonical dataset instead — it returns flat workout, exercise, and set
+canonical dataset instead. It returns flat workout, exercise, and set
 DataFrames with documented columns (see [docs/training-dataset.md](docs/training-dataset.md)):
 
 ```python

@@ -1,3 +1,4 @@
+import ast
 import json
 import tempfile
 import unittest
@@ -5,6 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
+import training_dataset
 from training_dataset import (
     BODYWEIGHT_COLUMNS,
     EXERCISE_COLUMNS,
@@ -297,6 +299,139 @@ class EdgeCaseTest(LoaderFixture):
         self.assertIn("sets=1", repr(direct))
 
 
+class WorkoutIdTest(LoaderFixture):
+    """Exercise and set ids derive from the workout uuid, so it must be sound."""
+
+    def test_missing_uuid_is_rejected_with_the_offending_workout(self):
+        with self.assertRaises(ValueError) as raised:
+            self.load(
+                wld_payload(
+                    [
+                        workout(uuid="w1", date="2024-01-03 07:30"),
+                        workout(uuid=None, date="2024-01-05 08:00"),
+                    ]
+                )
+            )
+
+        message = str(raised.exception)
+        self.assertIn("workout 1", message)
+        self.assertIn("2024-01-05 08:00", message)
+        self.assertIn("uuid", message)
+
+    def test_blank_uuid_is_rejected(self):
+        with self.assertRaises(ValueError) as raised:
+            self.load(wld_payload([workout(uuid="   ")]))
+
+        self.assertIn("has no uuid", str(raised.exception))
+
+    def test_duplicate_uuid_names_both_workouts(self):
+        with self.assertRaises(ValueError) as raised:
+            self.load(
+                wld_payload(
+                    [
+                        workout(uuid="w1", date="2024-01-03 07:30"),
+                        workout(uuid="w2", date="2024-01-04 07:30"),
+                        workout(uuid="w1", date="2024-01-05 07:30"),
+                    ]
+                )
+            )
+
+        message = str(raised.exception)
+        self.assertIn("'w1'", message)
+        self.assertIn("workout 0", message)
+        self.assertIn("workout 2", message)
+
+    def test_from_wld_validates_ids_too(self):
+        from schema import WLD
+
+        path = self.write_wld(
+            wld_payload([workout(uuid="w1"), workout(uuid="w1", date="2024-01-05 08:00")])
+        )
+
+        with self.assertRaises(ValueError):
+            TrainingDataset.from_wld(WLD(file_path=str(path)))
+
+
+class MalformedExportTest(LoaderFixture):
+    """Malformed structure reaches the caller as a located ValueError."""
+
+    def load_raw(self, payload):
+        path = self.temp_dir() / "fixture.wld"
+        path.write_text(json.dumps(payload))
+        return load_training_dataset(path)
+
+    def assert_invalid(self, payload, *expected_fragments):
+        with self.assertRaises(ValueError) as raised:
+            self.load_raw(payload)
+
+        message = str(raised.exception)
+        self.assertIn("is not a valid .wld export", message)
+        for fragment in expected_fragments:
+            self.assertIn(fragment, message)
+        return message
+
+    def test_null_top_level(self):
+        self.assert_invalid(None, "expected an object at the top level", "null")
+
+    def test_list_top_level(self):
+        self.assert_invalid([{"workouts": []}], "expected an object", "a list")
+
+    def test_null_section(self):
+        payload = wld_payload([])
+        payload["workouts"] = None
+        self.assert_invalid(payload, "'workouts' section is null")
+
+    def test_workouts_that_are_not_a_list(self):
+        payload = wld_payload([])
+        payload["workouts"] = {"w1": {}}
+        self.assert_invalid(payload, "'workouts' must be a list", "an object")
+
+    def test_settings_that_are_not_an_object(self):
+        payload = wld_payload([])
+        payload["settings"] = []
+        self.assert_invalid(payload, "'settings' must be an object", "a list")
+
+    def test_type_list_without_its_list_entry(self):
+        payload = wld_payload([])
+        payload["typeList"] = {}
+        self.assert_invalid(payload, "'typeList' must be an object containing")
+
+    def test_null_workout_entry(self):
+        self.assert_invalid(
+            wld_payload([workout(), None]), "workout 1 must be an object", "null"
+        )
+
+    def test_null_exercises_list(self):
+        self.assert_invalid(
+            wld_payload([{**workout(), "exercises": None}]),
+            "workout 0 has an invalid 'exercises' value",
+            "null",
+        )
+
+    def test_null_sets_list(self):
+        self.assert_invalid(
+            wld_payload([workout(exercises=[{**exercise(), "sets": None}])]),
+            "workout 0 exercise 0 has an invalid 'sets' value",
+            "null",
+        )
+
+    def test_null_set_entry(self):
+        self.assert_invalid(
+            wld_payload([workout(exercises=[exercise(sets=[{"reps": 5}, None])])]),
+            "workout 0 exercise 0 set 1 must be an object",
+            "null",
+        )
+
+    def test_file_that_is_not_json(self):
+        path = self.temp_dir() / "fixture.wld"
+        path.write_text("{not json")
+
+        with self.assertRaises(ValueError) as raised:
+            load_training_dataset(path)
+
+        self.assertIn("is not a valid .wld export", str(raised.exception))
+
+
 class BodyweightTest(LoaderFixture):
     def load_bodyweight(self, text):
         return self.load(
@@ -339,6 +474,43 @@ class BodyweightTest(LoaderFixture):
             self.load_bodyweight("date,pounds\n2024-01-01,192.6\n")
 
         self.assertIn("week_of", str(raised.exception))
+
+    def test_each_row_is_parsed_on_its_own_terms(self):
+        # pandas 2 infers one format from the first row and coerces every other
+        # layout in the column to NaT. Each row below uses a different layout.
+        frame = self.load_bodyweight(
+            "Week of,Average\n"
+            "2024-01-01 06:00:00,192.6\n"
+            "2024-01-08,195.1\n"
+            "1/15/2024,196.4\n"
+        )
+
+        self.assertEqual(
+            list(frame["week_of"]),
+            [
+                pd.Timestamp("2024-01-01"),
+                pd.Timestamp("2024-01-08"),
+                pd.Timestamp("2024-01-15"),
+            ],
+        )
+        self.assertEqual(list(frame["bodyweight"]), [192.6, 195.1, 196.4])
+
+    def test_date_parsing_avoids_apis_that_pandas_1_4_lacks(self):
+        # pandas 1.4 has neither ``format="mixed"`` nor a working
+        # ``infer_datetime_format`` for this case, and this environment cannot
+        # install pandas 1.4 to prove compatibility by running the suite, so
+        # the constraint is asserted against the module's own calls.
+        tree = ast.parse(Path(training_dataset.__file__).read_text())
+        pandas_2_only = [
+            keyword.arg
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and getattr(node.func, "attr", "") == "to_datetime"
+            for keyword in node.keywords
+            if keyword.arg in ("format", "infer_datetime_format")
+        ]
+
+        self.assertEqual(pandas_2_only, [])
 
     def test_bodyweight_is_empty_but_typed_when_no_path_is_given(self):
         data = self.load(wld_payload([workout()]))
