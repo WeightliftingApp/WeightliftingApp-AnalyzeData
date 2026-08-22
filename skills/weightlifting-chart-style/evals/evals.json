@@ -1,0 +1,23 @@
+{
+  "skill_name": "weightlifting-chart-style",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Add a squat Pareto-frontier update card beside the existing bench generator. Use the same paper style, show all historical attempts, call out the new 1RMe checkpoint, explain the bodyweight cost model, and keep the current 2400x1350 output size.",
+      "expected_output": "A squat generator that uses the shared Pareto frame, preserves the attempt and frontier semantics, includes direct annotation and footer notes, and has focused tests.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Refactor the DEXA lean-mass topography chart to use the repo's shared chart style. Do not lose scan numbers, phase arrows, efficiency labels, residual bars, body-fat contours, trend lines, metadata, or the model footer. Compare it with the preserved baseline instead of asserting pixel equality.",
+      "expected_output": "A style-only migration through src/chart_style.py with all DEXA information retained and a Pillow comparison report in the ignored artifact directory.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Create a new bodyweight-versus-deadlift chart for a progress review. It should match the existing editorial cards, explain the rolling bodyweight calculation, label the latest meaningful PR directly, and remain understandable when copied out of the notebook.",
+      "expected_output": "A standalone chart generator using the shared palette and framing, with semantic colors, direct annotation, model notes, deterministic dimensions, and information-preservation tests.",
+      "files": []
+    }
+  ]
+}

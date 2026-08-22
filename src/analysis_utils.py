@@ -151,6 +151,54 @@ def mark_pareto_frontier(
     return result
 
 
+def build_trimmed_trailing_bodyweight(
+    daily_weights: pd.DataFrame,
+    window_days: int = 7,
+    trim_each_side: int = 1,
+) -> pd.DataFrame:
+    """Calculate a trailing, outlier-trimmed bodyweight for each calendar day.
+
+    The default metric uses the seven calendar days ending on each date, removes
+    the single highest and lowest weigh-ins, and averages the middle five. A
+    value is emitted only when every calendar day in the window has a valid
+    weigh-in; this prevents old measurements from leaking across missing days.
+    """
+    required = {"date", "weight"}
+    if not required.issubset(daily_weights.columns):
+        missing = sorted(required - set(daily_weights.columns))
+        raise ValueError(f"daily_weights is missing columns: {missing}")
+    if window_days < 1:
+        raise ValueError("window_days must be at least 1")
+    if trim_each_side < 0 or 2 * trim_each_side >= window_days:
+        raise ValueError("trim_each_side must leave at least one value")
+
+    weights = daily_weights.loc[:, ["date", "weight"]].copy()
+    weights["date"] = pd.to_datetime(weights["date"], errors="coerce").dt.normalize()
+    weights["weight"] = pd.to_numeric(weights["weight"], errors="coerce")
+    weights = weights[
+        weights["date"].notna()
+        & weights["weight"].notna()
+        & (weights["weight"] > 0)
+    ].drop_duplicates("date", keep="last")
+    if weights.empty:
+        return pd.DataFrame(columns=["date", "bodyweight"])
+
+    calendar = pd.date_range(weights["date"].min(), weights["date"].max(), freq="D")
+    series = weights.set_index("date")["weight"].reindex(calendar)
+
+    def trimmed_mean(values: pd.Series) -> float:
+        if values.notna().sum() != window_days:
+            return float("nan")
+        ordered = sorted(float(value) for value in values)
+        kept = ordered[trim_each_side : window_days - trim_each_side]
+        return sum(kept) / len(kept)
+
+    bodyweight = series.rolling(window_days, min_periods=window_days).apply(
+        trimmed_mean, raw=False
+    )
+    return pd.DataFrame({"date": calendar, "bodyweight": bodyweight.to_numpy()})
+
+
 def build_big_three_pr_history(
     set_records: pd.DataFrame, weekly_weights: pd.DataFrame
 ) -> pd.DataFrame:

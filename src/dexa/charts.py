@@ -10,6 +10,18 @@ import pandas as pd
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.patches import FancyArrowPatch
 
+from chart_style import (
+    MONO_FONT,
+    PALETTE,
+    TOPOGRAPHY_AXES,
+    TOPOGRAPHY_FRAME,
+    add_footer,
+    add_header,
+    chart_canvas,
+    save_chart,
+    style_axes,
+)
+
 from .calculations import (
     add_interval_efficiency,
     fit_lean_mass_trend,
@@ -104,20 +116,6 @@ def plot_lean_mass_vs_bodyweight(totals: pd.DataFrame, output_path: Path) -> Non
         recent_points["weight_lb"], recent_points["lean_soft_tissue_lb"], 1
     )
 
-    paper_bg = "#f5f2ea"
-    panel_bg = "#faf8f2"
-    ink = "#18181b"
-    muted_ink = "#71717a"
-    grid_color = "#d6d3ca"
-    trend_color = "#334155"
-    positive_color = "#15803d"
-    negative_color = "#c2413b"
-    point_color = "#475569"
-    latest_point_color = "#f97316"
-    cut_path_color = "#38bdf8"
-    bulk_path_color = "#ef4444"
-    mono = "DejaVu Sans Mono"
-
     x_min = np.floor(points["weight_lb"].min() - 3)
     x_max = np.ceil(points["weight_lb"].max() + 3)
     y_min = np.floor(points["lean_soft_tissue_lb"].min() - 3)
@@ -125,61 +123,23 @@ def plot_lean_mass_vs_bodyweight(totals: pd.DataFrame, output_path: Path) -> Non
     reference_bone_mass = points.iloc[-1]["bone_mineral_content_lb"]
 
     grid_x, grid_y = np.meshgrid(
-        np.linspace(x_min, x_max, 320),
-        np.linspace(y_min, y_max, 240),
+        np.linspace(x_min, x_max, 320), np.linspace(y_min, y_max, 240),
     )
     body_fat_grid = modeled_body_fat_pct(grid_x, grid_y, reference_bone_mass)
     contour_levels = np.arange(5, 21, 1)
     body_fat_cmap = LinearSegmentedColormap.from_list(
-        "body_fat_topography",
-        ["#f7f6f1", "#e8e5de", "#d2cec4"],
+        "body_fat_topography", ["#f7f6f1", "#e8e5de", "#d2cec4"],
     )
-    with plt.rc_context(
-        {
-            "font.family": "DejaVu Sans",
-            "axes.edgecolor": ink,
-            "axes.labelcolor": ink,
-            "xtick.color": muted_ink,
-            "ytick.color": muted_ink,
-        }
-    ):
-        fig, ax = plt.subplots(figsize=(10, 8), facecolor=paper_bg)
-        ax.set_facecolor(panel_bg)
-
-        fig.text(
-            0.075,
-            0.90,
+    with chart_canvas(TOPOGRAPHY_FRAME) as (fig, ax):
+        add_header(
+            fig,
+            TOPOGRAPHY_FRAME,
             "LEAN MASS VS BODYWEIGHT",
-            fontsize=27,
-            fontweight="bold",
-            color=ink,
-            ha="left",
-        )
-        fig.text(
-            0.075,
-            0.86,
             "DEXA trajectory and distance from the full-history trend",
-            fontsize=13.5,
-            color=muted_ink,
-            ha="left",
-        )
-        fig.text(
-            0.95,
-            0.898,
-            f"SCAN WINDOW  {points['date'].min():%Y.%m} TO {points['date'].max():%Y.%m}",
-            fontsize=9.8,
-            family=mono,
-            color=muted_ink,
-            ha="right",
-        )
-        fig.text(
-            0.95,
-            0.858,
-            f"{len(points)} DEXA SCANS  /  TREND R2 {r_squared:.2f}",
-            fontsize=9.8,
-            family=mono,
-            color=muted_ink,
-            ha="right",
+            (
+                f"SCAN WINDOW  {points['date'].min():%Y.%m} TO {points['date'].max():%Y.%m}",
+                f"{len(points)} DEXA SCANS  /  TREND R2 {r_squared:.2f}",
+            ),
         )
 
         ax.contourf(
@@ -197,7 +157,7 @@ def plot_lean_mass_vs_bodyweight(totals: pd.DataFrame, output_path: Path) -> Non
             grid_y,
             body_fat_grid,
             levels=contour_levels,
-            colors="#a6a198",
+            colors=PALETTE.contour,
             linewidths=0.72,
             alpha=0.56,
             zorder=0.5,
@@ -209,16 +169,14 @@ def plot_lean_mass_vs_bodyweight(totals: pd.DataFrame, output_path: Path) -> Non
             inline=True,
             inline_spacing=3,
             fontsize=8.8,
-            colors=muted_ink,
+            colors=PALETTE.muted,
         )
 
         for (_, start), (_, end) in zip(
             points.iloc[:-1].iterrows(), points.iloc[1:].iterrows()
         ):
             path_color = (
-                cut_path_color
-                if end["weight_lb"] < start["weight_lb"]
-                else bulk_path_color
+                PALETTE.cut if end["weight_lb"] < start["weight_lb"] else PALETTE.bulk
             )
             ax.add_patch(
                 FancyArrowPatch(
@@ -239,7 +197,7 @@ def plot_lean_mass_vs_bodyweight(totals: pd.DataFrame, output_path: Path) -> Non
         ax.plot(
             trend_x,
             slope * trend_x + intercept,
-            color=trend_color,
+            color=PALETTE.trend,
             linewidth=2.6,
             linestyle=(0, (5, 4)),
             alpha=0.92,
@@ -248,14 +206,14 @@ def plot_lean_mass_vs_bodyweight(totals: pd.DataFrame, output_path: Path) -> Non
         ax.plot(
             trend_x,
             recent_slope * trend_x + recent_intercept,
-            color=trend_color,
+            color=PALETTE.trend,
             linewidth=2.1,
             linestyle=(0, (1.5, 3)),
             alpha=0.42,
             zorder=1.9,
         )
         point_colors = np.where(
-            points["trend_residual_lb"] >= 0, positive_color, negative_color
+            points["trend_residual_lb"] >= 0, PALETTE.positive, PALETTE.negative
         )
         ax.vlines(
             points["weight_lb"],
@@ -266,8 +224,8 @@ def plot_lean_mass_vs_bodyweight(totals: pd.DataFrame, output_path: Path) -> Non
             alpha=0.78,
             zorder=2.5,
         )
-        scan_colors = np.full(len(points), point_color, dtype=object)
-        scan_colors[-1] = latest_point_color
+        scan_colors = np.full(len(points), PALETTE.neutral_point, dtype=object)
+        scan_colors[-1] = PALETTE.latest
         ax.scatter(
             points["weight_lb"],
             points["lean_soft_tissue_lb"],
@@ -295,14 +253,14 @@ def plot_lean_mass_vs_bodyweight(totals: pd.DataFrame, output_path: Path) -> Non
                 ha="center",
                 va="center",
                 fontsize=10.4,
-                family=mono,
+                family=MONO_FONT,
                 color="#ffffff",
                 fontweight="bold",
                 zorder=4.5,
             )
             label_backing = {
                 "boxstyle": "square,pad=0.12",
-                "facecolor": paper_bg,
+                "facecolor": PALETTE.paper,
                 "edgecolor": "none",
                 "alpha": 0.64,
             }
@@ -316,8 +274,8 @@ def plot_lean_mass_vs_bodyweight(totals: pd.DataFrame, output_path: Path) -> Non
                     ha="right",
                     va="bottom",
                     fontsize=11.2,
-                    family=mono,
-                    color=latest_point_color,
+                    family=MONO_FONT,
+                    color=PALETTE.latest,
                     fontweight="bold",
                     bbox=label_backing,
                     zorder=5,
@@ -330,20 +288,15 @@ def plot_lean_mass_vs_bodyweight(totals: pd.DataFrame, output_path: Path) -> Non
                     ha="right",
                     va="bottom",
                     fontsize=11.2,
-                    family=mono,
-                    color=positive_color,
+                    family=MONO_FONT,
+                    color=PALETTE.positive,
                     fontweight="bold",
                     bbox=label_backing,
                     zorder=5,
                 )
                 if point["phase"] == "CUT":
-                    efficiency_label = (
-                        f"CUT EFF {point['interval_efficiency']:.0%}"
-                        + (
-                            f"  /  BEST OF {cut_count} CUTS"
-                            if latest_cut_rank == 1
-                            else ""
-                        )
+                    efficiency_label = f"CUT EFF {point['interval_efficiency']:.0%}" + (
+                        f"  /  BEST OF {cut_count} CUTS" if latest_cut_rank == 1 else ""
                     )
                 else:
                     efficiency_label = (
@@ -359,8 +312,8 @@ def plot_lean_mass_vs_bodyweight(totals: pd.DataFrame, output_path: Path) -> Non
                     ha="right",
                     va="top",
                     fontsize=8.8,
-                    family=mono,
-                    color=cut_path_color,
+                    family=MONO_FONT,
+                    color=PALETTE.cut,
                     fontweight="bold",
                     bbox=label_backing,
                     zorder=5,
@@ -387,8 +340,8 @@ def plot_lean_mass_vs_bodyweight(totals: pd.DataFrame, output_path: Path) -> Non
                 ha="center",
                 va=va,
                 fontsize=10.0,
-                family=mono,
-                color=muted_ink,
+                family=MONO_FONT,
+                color=PALETTE.muted,
                 fontweight="normal",
                 linespacing=1.35,
                 bbox=label_backing,
@@ -401,49 +354,28 @@ def plot_lean_mass_vs_bodyweight(totals: pd.DataFrame, output_path: Path) -> Non
             "MORE LEAN MASS FOR BODYWEIGHT  UP",
             transform=ax.transAxes,
             fontsize=9.5,
-            family=mono,
-            color=muted_ink,
+            family=MONO_FONT,
+            color=PALETTE.muted,
             ha="left",
             va="top",
         )
-        ax.set_xlabel("BODYWEIGHT (LB)", fontsize=11.5, family=mono, labelpad=13)
+        ax.set_xlabel("BODYWEIGHT (LB)", fontsize=11.5, family=MONO_FONT, labelpad=13)
         ax.set_ylabel(
-            "LEAN SOFT TISSUE (LB)", fontsize=11.5, family=mono, labelpad=7
+            "LEAN SOFT TISSUE (LB)", fontsize=11.5, family=MONO_FONT, labelpad=7,
         )
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
         ax.set_aspect("equal", adjustable="box")
         ax.set_anchor("N")
-        ax.tick_params(axis="both", labelsize=10.5, width=1.2, length=5)
-        ax.grid(True, color=grid_color, linewidth=1.05, alpha=0.72)
-        ax.set_axisbelow(False)
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
-        ax.spines["left"].set_linewidth(1.2)
-        ax.spines["bottom"].set_linewidth(1.2)
+        style_axes(ax, TOPOGRAPHY_AXES)
 
-        fig.text(
-            0.075,
-            0.065,
+        add_footer(
+            fig,
+            TOPOGRAPHY_FRAME,
             f"BODY FAT CONTOURS: 1 PP  /  LATEST BONE MASS: {reference_bone_mass:.1f} LB",
-            fontsize=9.2,
-            family=mono,
-            color=muted_ink,
-            ha="left",
-        )
-        fig.text(
-            0.95,
-            0.065,
             scan_sequence_footer(len(points)),
-            fontsize=8.6,
-            family=mono,
-            color=muted_ink,
-            fontweight="bold",
-            ha="right",
         )
-        fig.subplots_adjust(left=0.115, right=0.95, top=0.805, bottom=0.165)
-        fig.savefig(output_path, dpi=200, facecolor=paper_bg)
-        plt.close(fig)
+        save_chart(fig, output_path, dpi=TOPOGRAPHY_FRAME.dpi)
 
 
 def generate_charts(
