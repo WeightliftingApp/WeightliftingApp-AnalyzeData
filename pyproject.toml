@@ -25,12 +25,13 @@ notebooks = [
     "tqdm",
 ]
 dev = [
+    "Pillow",
     "pytest>=8",
 ]
 
 [tool.setuptools]
 package-dir = { "" = "src" }
-py-modules = ["analysis_utils"]
+py-modules = ["analysis_utils", "training_dataset"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
