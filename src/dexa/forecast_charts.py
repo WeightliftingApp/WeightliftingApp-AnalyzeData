@@ -12,7 +12,12 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .forecast import PREDICTION_COVERAGE, SAFETY_CONFIDENCE, BulkCeilingForecast
+from .forecast import (
+    PREDICTION_COVERAGE,
+    PREDICTION_COVERAGE_INNER,
+    SAFETY_CONFIDENCE,
+    BulkCeilingForecast,
+)
 
 # Light-mode chart chrome and the first two categorical slots. Both slots clear
 # every all-pairs gate against the #fcfcfb surface.
@@ -40,6 +45,7 @@ def plot_bulk_ceiling(forecast: BulkCeilingForecast, output_path: Path) -> None:
     target = forecast.assumptions.target_body_fat_pct
     grid = forecast.weight_grid_lb
     coverage_label = f"{PREDICTION_COVERAGE:.0%}"
+    inner_label = f"{PREDICTION_COVERAGE_INNER:.0%}"
     safety_label = f"{SAFETY_CONFIDENCE:.0%}"
 
     with plt.rc_context(
@@ -81,14 +87,15 @@ def plot_bulk_ceiling(forecast: BulkCeilingForecast, output_path: Path) -> None:
         figure.text(
             0.065,
             0.925,
-            f"Modeled from {forecast.interval_count} positive-weight DEXA intervals. "
+            f"Modeled from {forecast.interval_count} positive-weight DEXA intervals "
+            f"({forecast.resampling_unit_count} independent resampling units). "
             f"Anchored on the {forecast.current_date} scan.",
             fontsize=11.5,
             color=SECONDARY_INK,
             ha="left",
         )
 
-        _plot_body_fat(upper, forecast, grid, target, coverage_label)
+        _plot_body_fat(upper, forecast, grid, target, coverage_label, inner_label)
         _plot_probability(lower, forecast, grid, target, safety_label)
 
         lower.set_xlabel("BODYWEIGHT (LB)", fontsize=11, labelpad=10)
@@ -98,8 +105,13 @@ def plot_bulk_ceiling(forecast: BulkCeilingForecast, output_path: Path) -> None:
         figure.text(
             0.065,
             0.038,
-            f"Modeled estimates, not measurements. {forecast.interval_count} intervals "
-            f"is sparse. Seed {forecast.assumptions.seed}, "
+            "Modeled estimates, not measurements. "
+            + (
+                f"{forecast.resampling_unit_count} resampling units is sparse. "
+                if forecast.is_sparse
+                else ""
+            )
+            + f"Seed {forecast.assumptions.seed}, "
             f"{forecast.assumptions.simulations:,} simulations, "
             f"{forecast.assumptions.measurement_error_pp:g} pp assumed scan error.",
             fontsize=9,
@@ -111,15 +123,24 @@ def plot_bulk_ceiling(forecast: BulkCeilingForecast, output_path: Path) -> None:
         plt.close(figure)
 
 
-def _plot_body_fat(axis, forecast, grid, target, coverage_label) -> None:
+def _plot_body_fat(axis, forecast, grid, target, coverage_label, inner_label) -> None:
     axis.fill_between(
         grid,
-        forecast.body_fat_low_pct,
-        forecast.body_fat_high_pct,
+        forecast.body_fat_low_95_pct,
+        forecast.body_fat_high_95_pct,
         color=MODEL_BLUE,
-        alpha=0.16,
+        alpha=0.13,
         linewidth=0,
         label=f"{coverage_label} prediction band",
+    )
+    axis.fill_between(
+        grid,
+        forecast.body_fat_low_80_pct,
+        forecast.body_fat_high_80_pct,
+        color=MODEL_BLUE,
+        alpha=0.20,
+        linewidth=0,
+        label=f"{inner_label} prediction band",
     )
     axis.plot(
         grid,
@@ -157,22 +178,28 @@ def _plot_body_fat(axis, forecast, grid, target, coverage_label) -> None:
     bottom, top = axis.get_ylim()
     # The two reference weights sit only a few pounds apart, so the labels take
     # opposite sides of their own lines and different heights.
-    for weight, color, label, side, height in (
-        (
-            forecast.constant_ffm_ceiling_lb,
-            REFERENCE_ORANGE,
-            "Constant FFM",
-            "right",
-            0.16,
-        ),
-        (
-            forecast.safety_ceiling_lb,
-            MODEL_BLUE,
-            f"{SAFETY_CONFIDENCE:.0%} safety ceiling",
-            "left",
-            0.03,
-        ),
-    ):
+    references = []
+    if not forecast.constant_ffm_above_cap:
+        references.append(
+            (
+                forecast.constant_ffm_ceiling_lb,
+                REFERENCE_ORANGE,
+                "Constant FFM",
+                "right",
+                0.16,
+            )
+        )
+    if forecast.safety_ceiling.identified:
+        references.append(
+            (
+                forecast.safety_ceiling.raw_lb,
+                MODEL_BLUE,
+                f"{SAFETY_CONFIDENCE:.0%} safety ceiling",
+                "left",
+                0.03,
+            )
+        )
+    for weight, color, label, side, height in references:
         axis.axvline(weight, color=color, linewidth=1.6, linestyle=(0, (2, 2.5)))
         offset = -6 if side == "right" else 6
         axis.annotate(
@@ -184,6 +211,19 @@ def _plot_body_fat(axis, forecast, grid, target, coverage_label) -> None:
             color=color,
             fontweight="bold",
             ha=side,
+            va="bottom",
+        )
+    if not forecast.safety_ceiling.identified:
+        axis.annotate(
+            f"{SAFETY_CONFIDENCE:.0%} safety ceiling "
+            f"{forecast.safety_ceiling.describe_short()}",
+            (grid[-1], bottom + 0.03 * (top - bottom)),
+            xytext=(-6, 0),
+            textcoords="offset points",
+            fontsize=9.5,
+            color=MODEL_BLUE,
+            fontweight="bold",
+            ha="right",
             va="bottom",
         )
     axis.set_ylabel("MODELED BODY FAT (%)", fontsize=11, labelpad=8)
@@ -221,29 +261,31 @@ def _plot_probability(axis, forecast, grid, target, safety_label) -> None:
         ha="right",
         va="bottom",
     )
-    axis.scatter(
-        [forecast.safety_ceiling_lb],
-        [100.0 * SAFETY_CONFIDENCE],
-        s=90,
-        color=MODEL_BLUE,
-        zorder=5,
-    )
-    axis.annotate(
-        f"{forecast.safety_ceiling_lb:.1f} lb",
-        (forecast.safety_ceiling_lb, 100.0 * SAFETY_CONFIDENCE),
-        xytext=(9, -20),
-        textcoords="offset points",
-        fontsize=11,
-        color=MODEL_BLUE,
-        fontweight="bold",
-        ha="left",
-    )
-    axis.axvline(
-        forecast.constant_ffm_ceiling_lb,
-        color=REFERENCE_ORANGE,
-        linewidth=1.6,
-        linestyle=(0, (2, 2.5)),
-    )
+    if forecast.safety_ceiling.identified:
+        axis.scatter(
+            [forecast.safety_ceiling.raw_lb],
+            [100.0 * SAFETY_CONFIDENCE],
+            s=90,
+            color=MODEL_BLUE,
+            zorder=5,
+        )
+        axis.annotate(
+            forecast.safety_ceiling.describe_short(),
+            (forecast.safety_ceiling.raw_lb, 100.0 * SAFETY_CONFIDENCE),
+            xytext=(9, -20),
+            textcoords="offset points",
+            fontsize=11,
+            color=MODEL_BLUE,
+            fontweight="bold",
+            ha="left",
+        )
+    if not forecast.constant_ffm_above_cap:
+        axis.axvline(
+            forecast.constant_ffm_ceiling_lb,
+            color=REFERENCE_ORANGE,
+            linewidth=1.6,
+            linestyle=(0, (2, 2.5)),
+        )
     axis.set_ylabel(
         f"PROBABILITY UNDER {target:g}% (%)", fontsize=11, labelpad=8
     )

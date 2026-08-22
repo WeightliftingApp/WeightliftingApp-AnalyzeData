@@ -54,10 +54,22 @@ python scripts/forecast_bulk_ceiling.py --output-dir outputs
 ```
 
 The run reads `data/dexa.csv` and writes a Markdown report, a probability-curve
-CSV, and a chart. It is seeded, so repeat runs reproduce byte for byte. Pass
-`--target-body-fat-pct`, `--simulations`, `--seed`, `--measurement-error-pp`,
-`--partition-noise-scale`, or `--max-weight-lb` to change the assumptions. The
-report prints every one of them alongside the result.
+CSV, and a chart. It is seeded, so repeat runs reproduce byte for byte.
+
+Modeling assumptions are set with `--target-body-fat-pct`, `--simulations`,
+`--seed`, `--measurement-error-pp`, `--partition-noise-scale`,
+`--resample-unit`, and `--max-weight-lb`. The report prints every one of them
+alongside the result, along with a held-out predictive score.
+
+Planning inputs are optional and have no silent defaults. Without
+`--current-bodyweight-lb` (or `--weight-log`, a weekly CSV with `Week of` and
+`Average` columns) headroom is measured from the DEXA scan weight and labelled
+as such. Without `--weekly-bulk-rate-lb` no duration is reported:
+
+```bash
+python scripts/forecast_bulk_ceiling.py \
+  --current-bodyweight-lb 217.5 --weekly-bulk-rate-lb 0.5
+```
 
 To refresh the bodyweight and DEXA CSV exports from `Weight Log.xlsx`:
 
