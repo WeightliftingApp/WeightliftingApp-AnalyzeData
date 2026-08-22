@@ -2,19 +2,24 @@
 
 ## Result
 
-The repository now uses `pyproject.toml` for build metadata, dependencies, editable installs, and pytest discovery. The editable install preserves `analysis_utils` and `schema` as top-level imports. Package discovery also covers the incoming `dexa` package, and the module list includes the incoming `training_dataset` and `training_program_analysis` modules. CI runs the tracked tests on Python 3.10 through 3.14.
+The repository now uses `pyproject.toml` for build metadata, dependencies, editable installs, and pytest discovery. The editable install preserves `analysis_utils` and `schema` as top-level imports. Setuptools discovers packages under `src/`, while `py-modules` lists only `analysis_utils`, the top-level module present on this branch. CI runs the tracked tests on Python 3.10 through 3.14.
 
 No notebook files, chart code, DEXA behavior, or schema behavior changed.
 
 ## Judgment calls and ambiguities
 
 - Python 3.10 is the minimum because the existing modules use `X | None` unions and built-in generic types. CI covers every minor release from 3.10 through the locally tested 3.14.
-- `pandas`, `openpyxl`, `numpy`, and `matplotlib` are base dependencies because installed Python modules import them at runtime. This includes the incoming DEXA package. Jupyter, SciPy, and the remaining notebook tools are in the `notebooks` extra so CI does not install the full interactive stack.
+- `pandas>=2.0`, `openpyxl`, `numpy`, and `matplotlib` are base dependencies. The pandas floor records the behavior required by the integrated dataset code. NumPy and Matplotlib must remain base dependencies when the DEXA package is integrated because that package imports them at runtime. Jupyter, SciPy, and the remaining notebook tools are in the `notebooks` extra so CI does not install the full interactive stack.
 - `tqdm` was added to the notebook dependency group even though it was absent from the old requirements file. A tracked notebook imports it directly.
 - `pytest` is the sole development dependency. The tests use `unittest`, but pytest discovers them without requiring `tests/__init__.py` and gives one root-level verification command.
 - The conversion scripts remain repository scripts rather than installed commands. `scripts.convert_dexa_xlsx` works during root-level test runs because the repository root is on the test runner's import path. If these scripts need to run from arbitrary directories, they should get package modules and console-script entry points in a separate change.
 - The version remains `0.1.0` in static metadata. No release or publishing process exists, so adding dynamic version tooling would create machinery with no current user.
-- `training_dataset` and `training_program_analysis` are declared before their source files arrive in this worktree. Setuptools permits the editable install, and the declarations make the integrated tree install both modules without another packaging change.
+
+## Standards review follow-up
+
+- Removed `training_dataset` and `training_program_analysis` from `py-modules` because neither file exists on this branch. The integration branch should add `training_dataset` to the module list when it adds the file. `training_program_analysis` is unrelated user work and must not be declared by this branch.
+- Set the direct pandas requirement to `pandas>=2.0`. The lower bound states the integrated dataset code's dependency on pandas 2 behavior without an exact pin.
+- Converted README section headings to sentence case and replaced em dashes in the analysis bullets with plain instructions.
 
 ## Rejected alternatives
 
@@ -47,14 +52,14 @@ python3 -m venv .venv
 .venv/bin/python -c 'import joypy, jupyter, matplotlib, numpy, scipy, seaborn, tqdm; print("notebook dependencies import successfully")'
 # Passed.
 
-.venv/bin/python -m pip wheel --no-deps --wheel-dir /tmp/repo-foundation-wheel-a5219cfc .
+.venv/bin/python -m pip wheel --no-deps --wheel-dir /tmp/repo-foundation-wheel-followup-a5219cfc .
 # Passed; built weightlifting_app_analysis-0.1.0-py3-none-any.whl.
 
 .venv/bin/python -m pytest -q
 # Passed: 13 tests.
 
-cd /tmp && <workspace>/.venv/bin/python -c 'from analysis_utils import calculate_workout_streaks; from schema import WLD; print(calculate_workout_streaks.__name__, WLD.__name__)'
-# Passed from outside the repository: calculate_workout_streaks WLD.
+cd /tmp && <workspace>/.venv/bin/python -c 'import pandas as pd; from analysis_utils import calculate_workout_streaks; from schema import WLD; assert int(pd.__version__.split(".")[0]) >= 2; print(calculate_workout_streaks.__name__, WLD.__name__, pd.__version__)'
+# Passed from outside the repository: calculate_workout_streaks WLD 3.0.5.
 
 .venv/bin/python -m pip check
 # Passed: no broken requirements.

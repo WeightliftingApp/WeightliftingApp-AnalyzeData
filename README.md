@@ -2,11 +2,11 @@
 
 This repo provides a variety of scripts to analyze the data from [Weightlifting App](https://apps.apple.com/us/app/weightlifting-app/id1266077653) 💪
 
-## Data Setup
+## Data setup
 
 You can either use your own data or use the example data provided in the `data/example-*.wld` files.
 
-### Using Your Own Data
+### Using your own data
 
 1. Open [Weightliting App](https://apps.apple.com/us/app/weightlifting-app/id1266077653) on your iPhone and navigate to User -> Settings -> Export All Data.
 
@@ -32,8 +32,8 @@ Run any of the `.ipynb` Jupyter notebooks in the `src/` folder or create your ow
 
 Key analyses:
 
-- `src/analyze_big_three.ipynb` — lifetime Big Three progression, annual snapshots, historical trends, and one-year projections.
-- `src/analyze_bodyweight_strength_evals.ipynb` — bodyweight-aligned strength history, all-attempt Pareto frontiers, and social-card exports for bench, squat, deadlift, and overhead press.
+- Use `src/analyze_big_three.ipynb` for lifetime Big Three progression, annual snapshots, historical trends, and one-year projections.
+- Use `src/analyze_bodyweight_strength_evals.ipynb` for bodyweight-aligned strength history, all-attempt Pareto frontiers, and social-card exports for bench, squat, deadlift, and overhead press.
 
 To refresh the bodyweight and DEXA CSV exports from `Weight Log.xlsx`:
 
