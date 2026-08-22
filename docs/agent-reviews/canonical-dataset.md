@@ -297,10 +297,14 @@ PYTHONPATH=src venv/bin/python -c "from training_dataset import load_training_da
 git merge-tree --write-tree codex/canonical-dataset codex/repo-foundation
 ```
 
-The worktree has no `venv`; the main checkout's interpreter
-(`/Users/chappyasel/Desktop/Repos/WeightliftingApp-AnalyzeData/venv/bin/python`,
-Python 3.13.12, pandas 2.2.3) was used read only. `pytest` is not installed
-anywhere, so the suite runs under `unittest`, matching the existing tests.
+The worktree had no environment of its own, so the main checkout's interpreter
+(Python 3.13.12, pandas 2.2.3) was used read only. `pytest` was not installed
+anywhere at the time, so the commands above run under `unittest`.
+
+The packaging branch has since landed. Today the documented setup is
+`python3 -m venv .venv` plus `python -m pip install -e ".[dev]"`, and the suite
+runs with `python -m pytest`. The `venv/bin/python` commands above are the
+record of what was run then, not instructions to follow now.
 
 ## Next steps
 

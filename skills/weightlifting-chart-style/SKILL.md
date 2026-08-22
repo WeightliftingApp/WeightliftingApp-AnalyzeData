@@ -10,17 +10,19 @@ Create a self-explanatory analytical card without changing what the analysis say
 ## Start with the evidence
 
 1. Read `docs/chart-style.md` and `src/chart_style.py`.
-2. Read the closest existing generator. Use `src/dexa/charts.py` for topography or trajectories and `src/generate_bench_frontier_update.py` for frontier cards.
+2. Read the closest existing generator. Use `src/dexa/charts.py` for topography or trajectories, `src/generate_bench_frontier_update.py` for frontier cards, and `src/dexa/forecast_charts.py` for stacked panels and modeled bands.
 3. Inventory the current information before editing: plotted rows, highlighted points, labels, units, limits, title, subtitle, metadata, legend, annotations, and footer semantics.
 4. If a preserved baseline exists, inspect its dimensions and appearance. Never edit a baseline image.
 
 ## Build the chart
 
-Use `chart_canvas` with the closest frame preset. Use `add_header`, `style_axes`, `add_footer`, and `save_chart` for framing. Keep calculations and chart-specific marks in the generator.
+Use `chart_canvas` with the closest frame preset, or `stacked_canvas` when the card needs a column of panels over one shared x axis. Use `add_header`, `style_axes`, `add_footer`, and `save_chart` for framing. Keep calculations and chart-specific marks in the generator.
 
-Use the shared palette by meaning, not by convenience. Neutral marks provide context. Use `PALETTE.frontier` for an established Pareto frontier and `PALETTE.advance` for its new checkpoint. Use positive and negative colors for trend residuals, and cut and bulk colors for phase paths and phase labels. Annotate the latest scan, new frontier point, or other claim close to its mark.
+Use the shared palette by meaning, not by convenience. Neutral marks provide context. Use `PALETTE.frontier` for an established Pareto frontier or a modeled series, and `PALETTE.advance` for a new checkpoint. Use positive and negative colors for trend residuals, and cut and bulk colors for phase paths and phase labels. Use `PALETTE.reference` for a reference construct plotted beside a model rather than produced by it. Annotate the latest scan, new frontier point, or other claim close to its mark.
 
-The footer must explain the model and reading direction in plain terms. A reader should understand trimming, contour assumptions, trend residuals, or Pareto dominance from the image alone.
+If no palette entry carries the meaning you need, add one field with a name that states the meaning. Do not reuse a documented color for a second concept, and do not add a field that duplicates an existing hex.
+
+The footer must explain the model and reading direction in plain terms. A reader should understand trimming, contour assumptions, trend residuals, or Pareto dominance from the image alone. Both footer strings share one row, so check that the widest values a generator can produce still leave a gap between them. A layout test that measures rendered text extents is cheaper than finding the collision in a published image.
 
 ## Preserve information
 
@@ -46,4 +48,8 @@ For the established cards, run:
 PYTHONPATH=src:. python scripts/compare_charts.py --generate
 ```
 
-Inspect the side-by-side sheets and diff images under `.artifacts/chart-comparisons`. The comparison command fails on a dimension mismatch or a changed-pixel fraction over `0.01`. Passing this broad gate does not prove semantic correctness. Treat a missing point, label, unit, legend entry, state color, or footer claim as a failure even when the image looks polished.
+Inspect the side-by-side sheets and diff images under `.artifacts/chart-comparisons`.
+
+The command reads the Matplotlib version out of each PNG and gates on what those two renderers support. One renderer on both sides gets the strict `0.01` fidelity threshold. Different renderers, or a PNG that does not name one, get only a `0.15` gross-change ceiling and a refusal to certify, because a Matplotlib upgrade re-flows every string and reads as several percent on its own. Rerun under the baseline renderer, or read the sheets and pass `--accept-renderer-drift`. Never reach for `--accept-renderer-drift` to get past a difference you have not looked at, and never regenerate a baseline to make a comparison pass.
+
+Passing this broad gate does not prove semantic correctness. Treat a missing point, label, unit, legend entry, state color, or footer claim as a failure even when the image looks polished.

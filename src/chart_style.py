@@ -35,6 +35,9 @@ class ChartPalette:
     advance: str = "#dc2626"
     advance_ink: str = "#991b1b"
     contour: str = "#a6a198"
+    # A secondary reference construct plotted alongside a primary modeled
+    # series, such as the constant fat-free-mass ceiling in the bulk forecast.
+    reference: str = "#ea580c"
 
 
 @dataclass(frozen=True)
@@ -101,6 +104,25 @@ PARETO_FRAME = ChartFrame(
     footer_sizes=(8.2, 8.2),
 )
 
+FORECAST_FRAME = ChartFrame(
+    figsize=(11, 9),
+    dpi=200,
+    plot_bounds=(0.085, 0.965, 0.885, 0.105),
+    header_left=0.065,
+    header_right=0.965,
+    title_y=0.951,
+    subtitle_y=0.920,
+    metadata_ys=(0.949, 0.921),
+    footer_y=0.038,
+    title_size=21,
+    subtitle_size=11.5,
+    metadata_size=8.2,
+    # This card carries a longer model note than the other two, because the
+    # simulation has more assumptions to disclose. Both footer strings have to
+    # fit on one row without meeting in the middle.
+    footer_sizes=(7.8, 7.8),
+)
+
 TOPOGRAPHY_AXES = AxisStyle(
     tick_size=10.5,
     tick_width=1.2,
@@ -128,22 +150,55 @@ def frame_figure(fig: Figure, frame: ChartFrame) -> None:
     fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
 
 
+EDITORIAL_RC = {
+    "font.family": SANS_FONT,
+    "axes.edgecolor": PALETTE.ink,
+    "axes.labelcolor": PALETTE.ink,
+    "xtick.color": PALETTE.muted,
+    "ytick.color": PALETTE.muted,
+}
+
+
 @contextmanager
 def chart_canvas(frame: ChartFrame) -> Iterator[Tuple[Figure, Axes]]:
     """Yield a paper-toned figure and one editorial plot panel."""
-    rc = {
-        "font.family": SANS_FONT,
-        "axes.edgecolor": PALETTE.ink,
-        "axes.labelcolor": PALETTE.ink,
-        "xtick.color": PALETTE.muted,
-        "ytick.color": PALETTE.muted,
-    }
-    with plt.rc_context(rc):
+    with plt.rc_context(EDITORIAL_RC):
         fig, ax = plt.subplots(figsize=frame.figsize, facecolor=PALETTE.paper)
         ax.set_facecolor(PALETTE.panel)
         frame_figure(fig, frame)
         try:
             yield fig, ax
+        except Exception:
+            plt.close(fig)
+            raise
+
+
+@contextmanager
+def stacked_canvas(
+    frame: ChartFrame, height_ratios: Sequence[float], hspace: float,
+) -> Iterator[Tuple[Figure, Tuple[Axes, ...]]]:
+    """Yield a paper-toned figure and a column of panels sharing one x axis.
+
+    Charts that measure two different quantities against the same x quantity
+    stack panels instead of crowding one panel with a second y axis.
+    """
+    if len(height_ratios) < 2:
+        raise ValueError("a stacked canvas needs at least two panels")
+    with plt.rc_context(EDITORIAL_RC):
+        fig, axes = plt.subplots(
+            len(height_ratios),
+            1,
+            figsize=frame.figsize,
+            sharex=True,
+            gridspec_kw={"height_ratios": list(height_ratios), "hspace": hspace},
+            facecolor=PALETTE.paper,
+        )
+        for ax in axes:
+            ax.set_facecolor(PALETTE.panel)
+        frame_figure(fig, frame)
+        fig.subplots_adjust(hspace=hspace)
+        try:
+            yield fig, tuple(axes)
         except Exception:
             plt.close(fig)
             raise

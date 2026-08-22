@@ -187,6 +187,10 @@ ratio of that figure to the observed spread. What remains after removing it is
 
 ## Commands
 
+These ran before the packaging branch landed, against a `requirements.txt` that
+no longer exists. Today the same checks are `python3 -m venv .venv`,
+`python -m pip install -e ".[dev]"`, and `python -m pytest`.
+
 ```text
 python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
 

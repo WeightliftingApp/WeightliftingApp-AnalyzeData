@@ -49,7 +49,7 @@ Key analyses:
 To forecast the bodyweight at which a target DEXA body-fat percentage is reached:
 
 ```bash
-source venv/bin/activate
+source .venv/bin/activate
 python scripts/forecast_bulk_ceiling.py --output-dir outputs
 ```
 
@@ -68,7 +68,7 @@ as such. Without `--weekly-bulk-rate-lb` no duration is reported:
 
 ```bash
 python scripts/forecast_bulk_ceiling.py \
-  --current-bodyweight-lb 217.5 --weekly-bulk-rate-lb 0.5
+  --current-bodyweight-lb 200 --weekly-bulk-rate-lb 0.5
 ```
 
 To refresh the bodyweight and DEXA CSV exports from `Weight Log.xlsx`:

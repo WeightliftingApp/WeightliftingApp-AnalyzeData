@@ -142,18 +142,18 @@ class ConstantFfmCeilingTest(unittest.TestCase):
     def test_matches_the_closed_form(self):
         # 180 lb of fat-free mass is 80% of bodyweight at 20% body fat.
         self.assertAlmostEqual(constant_ffm_ceiling_lb(180.0, 20.0), 225.0)
-        self.assertAlmostEqual(constant_ffm_ceiling_lb(186.6, 20.0), 233.25)
+        self.assertAlmostEqual(constant_ffm_ceiling_lb(200.0, 20.0), 250.0)
         self.assertAlmostEqual(constant_ffm_ceiling_lb(180.0, 10.0), 200.0)
 
     def test_result_actually_reads_the_target(self):
-        ceiling = constant_ffm_ceiling_lb(186.6, 20.0)
-        body_fat_pct = 100.0 * (1.0 - 186.6 / ceiling)
+        ceiling = constant_ffm_ceiling_lb(180.0, 20.0)
+        body_fat_pct = 100.0 * (1.0 - 180.0 / ceiling)
         self.assertAlmostEqual(body_fat_pct, 20.0)
 
     def test_zero_lean_fraction_reduces_to_the_constant_ffm_case(self):
         self.assertAlmostEqual(
-            crossing_weight_lb(214.8, 186.6, 0.0, 20.0),
-            constant_ffm_ceiling_lb(186.6, 20.0),
+            crossing_weight_lb(210.0, 180.0, 0.0, 20.0),
+            constant_ffm_ceiling_lb(180.0, 20.0),
         )
 
     def test_rejects_nonpositive_fat_free_mass(self):
@@ -165,7 +165,7 @@ class ConstantFfmCeilingTest(unittest.TestCase):
 
 class CrossingWeightTest(unittest.TestCase):
     def test_solved_weight_reads_the_target(self):
-        weight, fat_free, lean_fraction, target = 214.8, 186.6, 0.4, 20.0
+        weight, fat_free, lean_fraction, target = 210.0, 180.0, 0.4, 20.0
         crossing = crossing_weight_lb(weight, fat_free, lean_fraction, target)
         projected_fat_free = fat_free + lean_fraction * (crossing - weight)
         self.assertAlmostEqual(
@@ -173,14 +173,14 @@ class CrossingWeightTest(unittest.TestCase):
         )
 
     def test_gaining_lean_mass_raises_the_ceiling(self):
-        baseline = crossing_weight_lb(214.8, 186.6, 0.0, 20.0)
-        with_gain = crossing_weight_lb(214.8, 186.6, 0.4, 20.0)
+        baseline = crossing_weight_lb(210.0, 180.0, 0.0, 20.0)
+        with_gain = crossing_weight_lb(210.0, 180.0, 0.4, 20.0)
         self.assertGreater(with_gain, baseline)
 
     def test_no_crossing_when_lean_gain_outpaces_the_target(self):
         # k >= 1 - t means body fat falls as weight rises.
-        self.assertEqual(crossing_weight_lb(214.8, 186.6, 0.80, 20.0), np.inf)
-        self.assertEqual(crossing_weight_lb(214.8, 186.6, 0.95, 20.0), np.inf)
+        self.assertEqual(crossing_weight_lb(210.0, 180.0, 0.80, 20.0), np.inf)
+        self.assertEqual(crossing_weight_lb(210.0, 180.0, 0.95, 20.0), np.inf)
 
     def test_returns_current_weight_when_already_at_target(self):
         # 160 lb fat-free at 200 lb is exactly 20%.
@@ -189,12 +189,12 @@ class CrossingWeightTest(unittest.TestCase):
 
     def test_accepts_arrays_and_returns_floats_for_scalars(self):
         vectorized = crossing_weight_lb(
-            214.8, 186.6, np.array([0.0, 0.4, 0.9]), 20.0
+            210.0, 180.0, np.array([0.0, 0.4, 0.9]), 20.0
         )
         self.assertEqual(vectorized.shape, (3,))
-        np.testing.assert_allclose(vectorized[0], 233.25)
+        np.testing.assert_allclose(vectorized[0], 225.0)
         self.assertEqual(vectorized[2], np.inf)
-        self.assertIsInstance(crossing_weight_lb(214.8, 186.6, 0.4, 20.0), float)
+        self.assertIsInstance(crossing_weight_lb(210.0, 180.0, 0.4, 20.0), float)
 
 
 class ExtractBulkIntervalsTest(unittest.TestCase):
@@ -268,8 +268,8 @@ class ExtractBulkIntervalsTest(unittest.TestCase):
 class ReproducibilityTest(unittest.TestCase):
     def test_same_seed_reproduces_every_draw(self):
         arguments = dict(
-            current_weight_lb=214.8,
-            current_fat_free_mass_lb=186.6,
+            current_weight_lb=210.0,
+            current_fat_free_mass_lb=180.0,
             lean_fractions=np.array([0.30, 0.25, 0.50, 0.40, 0.50]),
             target_body_fat_pct=20.0,
             simulations=2000,
@@ -288,8 +288,8 @@ class ReproducibilityTest(unittest.TestCase):
 
     def test_a_different_seed_gives_different_draws(self):
         arguments = dict(
-            current_weight_lb=214.8,
-            current_fat_free_mass_lb=186.6,
+            current_weight_lb=210.0,
+            current_fat_free_mass_lb=180.0,
             lean_fractions=np.array([0.30, 0.25, 0.50, 0.40, 0.50]),
             target_body_fat_pct=20.0,
             simulations=2000,
@@ -599,14 +599,14 @@ class SensitivityTest(unittest.TestCase):
     def test_measurement_implied_spread_uses_the_typical_interval(self):
         intervals, _ = extract_bulk_intervals(five_interval_totals())
 
-        implied = measurement_implied_lean_fraction_sd(214.8, intervals, 0.38)
+        implied = measurement_implied_lean_fraction_sd(210.0, intervals, 0.38)
 
-        # sqrt(2) * (214.8 * 0.0038) / median gain of 20 lb.
-        self.assertAlmostEqual(implied, np.sqrt(2.0) * 0.81624 / 20.0, places=6)
+        # sqrt(2) * (210.0 * 0.0038) / median gain of 20 lb.
+        self.assertAlmostEqual(implied, np.sqrt(2.0) * 0.798 / 20.0, places=6)
 
     def test_measurement_implied_spread_needs_an_interval(self):
         with self.assertRaisesRegex(ValueError, "at least one interval"):
-            measurement_implied_lean_fraction_sd(214.8, (), 0.8)
+            measurement_implied_lean_fraction_sd(210.0, (), 0.8)
 
 
 class OutputSchemaTest(unittest.TestCase):

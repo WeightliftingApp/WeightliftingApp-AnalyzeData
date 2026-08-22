@@ -23,16 +23,16 @@ from scripts.analyze_dexa import main as cli_main
 def totals_fixture() -> pd.DataFrame:
     return pd.DataFrame(
         {
-            "date": pd.to_datetime(["2022-09-15", "2026-07-10", "2026-08-21"]),
-            "weight_lb": [190.8, 223.2, 214.8],
-            "lean_soft_tissue_lb": [168.0, 179.3, 177.4],
-            "fat_mass_lb": [13.7, 34.8, 28.2],
-            "bone_mineral_content_lb": [9.1, 9.1, 9.2],
-            "body_fat_pct": [7.18, 15.59, 13.13],
-            "fat_free_mass_lb": [177.1, 188.4, 186.6],
-            "ffmi": [24.02, 25.55, 25.31],
-            "normalized_ffmi": [23.84, 25.38, 25.13],
-            "bmi": [25.88, 30.27, 29.13],
+            "date": pd.to_datetime(["2024-01-15", "2025-06-10", "2025-08-20"]),
+            "weight_lb": [200.0, 220.0, 210.0],
+            "lean_soft_tissue_lb": [171.0, 178.0, 175.8],
+            "fat_mass_lb": [20.0, 33.0, 25.2],
+            "bone_mineral_content_lb": [9.0, 9.0, 9.0],
+            "body_fat_pct": [10.0, 15.0, 12.0],
+            "fat_free_mass_lb": [180.0, 187.0, 184.8],
+            "ffmi": [24.41, 25.36, 25.06],
+            "normalized_ffmi": [24.23, 25.18, 24.88],
+            "bmi": [27.12, 29.84, 28.48],
             "height_in": [72.0, 72.0, 72.0],
             "notes": ["baseline", "previous", "latest"],
         }
@@ -50,8 +50,8 @@ def regions_fixture() -> pd.DataFrame:
     }
     for region, (previous, latest) in values.items():
         for scan_date, measurements in (
-            ("2026-07-10", previous),
-            ("2026-08-21", latest),
+            ("2025-06-10", previous),
+            ("2025-08-20", latest),
         ):
             rows.append(
                 {
@@ -173,16 +173,16 @@ class AnalyzeBodyCompositionTest(unittest.TestCase):
     def test_preserves_latest_scan_calculations(self):
         analysis = analyze_body_composition(totals_fixture(), regions_fixture())
 
-        self.assertAlmostEqual(analysis.total_loss, 8.4)
-        self.assertAlmostEqual(analysis.fat_loss, 6.6)
-        self.assertAlmostEqual(analysis.lean_loss, 1.9)
-        self.assertAlmostEqual(analysis.fat_share, 6.6 / 8.4)
-        self.assertAlmostEqual(analysis.delta["body_fat_pct"], -2.46)
+        self.assertAlmostEqual(analysis.total_loss, 10.0)
+        self.assertAlmostEqual(analysis.fat_loss, 7.8)
+        self.assertAlmostEqual(analysis.lean_loss, 2.2)
+        self.assertAlmostEqual(analysis.fat_share, 7.8 / 10.0)
+        self.assertAlmostEqual(analysis.delta["body_fat_pct"], -3.0)
 
         markdown = render_markdown(analysis)
-        self.assertIn("Total mass fell 8.4 lb to 214.8 lb", markdown)
-        self.assertIn("Fat mass fell 6.6 lb to 28.2 lb", markdown)
-        self.assertIn("| FFMI | 25.55 | 25.31 | -0.24 |", markdown)
+        self.assertIn("Total mass fell 10.0 lb to 210.0 lb", markdown)
+        self.assertIn("Fat mass fell 7.8 lb to 25.2 lb", markdown)
+        self.assertIn("| FFMI | 25.36 | 25.06 | -0.30 |", markdown)
 
     def test_current_scan_uses_analysis_values_in_interpretation(self):
         totals = totals_fixture()
@@ -225,7 +225,7 @@ class AnalyzeBodyCompositionTest(unittest.TestCase):
         markdown = render_markdown(analysis)
 
         self.assertIn("# DEXA analysis - 2027-01-15", markdown)
-        self.assertIn("**13.1% to 12.6%**", markdown)
+        self.assertIn("**12.0% to 12.6%**", markdown)
         self.assertIn("**25.80 raw / 25.60 height-normalized**", markdown)
         self.assertIn("**29.60**", markdown)
         self.assertIn("Supplemental interpretation unavailable", markdown)
@@ -257,7 +257,7 @@ class AnalyzeBodyCompositionTest(unittest.TestCase):
             analysis = analyze_body_composition(totals, regions)
             markdown = render_markdown(analysis)
 
-        self.assertIn("# DEXA analysis - 2026-08-21", markdown)
+        self.assertIn("# DEXA analysis - 2025-08-20", markdown)
 
 
 class ReportPipelineTest(unittest.TestCase):
@@ -289,7 +289,7 @@ class ReportPipelineTest(unittest.TestCase):
             self.assertEqual(totals_path.read_bytes(), totals_before)
             self.assertEqual(regions_path.read_bytes(), regions_before)
             self.assertIn("may contain personal health data", stderr.getvalue())
-            self.assertTrue((output_dir / "dexa-analysis-2026-08-21.md").is_file())
+            self.assertTrue((output_dir / "dexa-analysis-2025-08-20.md").is_file())
             self.assertTrue((output_dir / "dexa-composition-history.png").is_file())
             self.assertTrue(
                 (output_dir / "dexa-lean-mass-vs-bodyweight.png").is_file()
