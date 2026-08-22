@@ -30,6 +30,17 @@ python -m pip install -e ".[notebooks]"
 
 Run any of the `.ipynb` Jupyter notebooks in the `src/` folder or create your own.
 
+For analyses that would otherwise walk the nested export structure, load the
+canonical dataset instead — it returns flat workout, exercise, and set
+DataFrames with documented columns (see [docs/training-dataset.md](docs/training-dataset.md)):
+
+```python
+from training_dataset import load_training_dataset
+
+data = load_training_dataset("../data/example-chappy.wld")
+data.sets[data.sets["display_name"] == "Flat Barbell Bench Press"]
+```
+
 Key analyses:
 
 - Use `src/analyze_big_three.ipynb` for lifetime Big Three progression, annual snapshots, historical trends, and one-year projections.
