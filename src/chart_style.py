@@ -143,6 +143,49 @@ PARETO_AXES = AxisStyle(
     axis_below=True,
 )
 
+# Notebook charts keep their original figure dimensions while sharing the same
+# paper, type, spacing, grid, and legend treatment as the published cards.
+NOTEBOOK_AXES = AxisStyle(
+    tick_size=9.5,
+    tick_width=1.0,
+    tick_length=4,
+    spine_width=1.0,
+    grid_width=0.85,
+    grid_alpha=0.68,
+    axis_below=True,
+)
+
+CATEGORICAL_COLORS = (
+    "#3b5b92",
+    "#b4534b",
+    "#3f7d5b",
+    "#b7791f",
+    "#76558f",
+    "#287f8d",
+    "#8a6343",
+)
+
+
+def notebook_frame(
+    figsize: Tuple[float, float], *, dpi: int = 100,
+) -> ChartFrame:
+    """Create an editorial frame without changing a notebook chart's size."""
+    return ChartFrame(
+        figsize=figsize,
+        dpi=dpi,
+        plot_bounds=(0.09, 0.96, 0.80, 0.17),
+        header_left=0.075,
+        header_right=0.95,
+        title_y=0.93,
+        subtitle_y=0.885,
+        metadata_ys=(0.928, 0.888),
+        footer_y=0.055,
+        title_size=20,
+        subtitle_size=10.5,
+        metadata_size=8.5,
+        footer_sizes=(8.0, 8.0),
+    )
+
 
 def frame_figure(fig: Figure, frame: ChartFrame) -> None:
     """Apply a frame's plot bounds to a figure."""
@@ -253,6 +296,19 @@ def style_axes(ax: Axes, style: AxisStyle) -> None:
     ax.spines["right"].set_visible(False)
     ax.spines["left"].set_linewidth(style.spine_width)
     ax.spines["bottom"].set_linewidth(style.spine_width)
+
+
+def style_legend(ax: Axes, **kwargs):
+    """Create a compact legend that matches the shared notebook frame."""
+    legend = ax.legend(
+        frameon=True,
+        facecolor=PALETTE.panel,
+        edgecolor=PALETTE.grid,
+        framealpha=0.96,
+        prop={"family": MONO_FONT, "size": 8.5},
+        **kwargs,
+    )
+    return legend
 
 
 def add_footer(

@@ -7,14 +7,18 @@ import matplotlib.pyplot as plt
 from PIL import Image
 
 from chart_style import (
+    CATEGORICAL_COLORS,
+    NOTEBOOK_AXES,
     PALETTE,
     PARETO_AXES,
     PARETO_FRAME,
     add_footer,
     add_header,
     chart_canvas,
+    notebook_frame,
     save_chart,
     style_axes,
+    style_legend,
 )
 
 
@@ -27,6 +31,15 @@ class ChartStyleConstantsTest(unittest.TestCase):
         self.assertEqual(PARETO_FRAME.plot_bounds, (0.08, 0.96, 0.82, 0.17))
         with self.assertRaises(FrozenInstanceError):
             PALETTE.paper = "#ffffff"
+
+    def test_notebook_frame_preserves_requested_dimensions(self):
+        frame = notebook_frame((15, 6), dpi=120)
+
+        self.assertEqual(frame.figsize, (15, 6))
+        self.assertEqual(frame.dpi, 120)
+        self.assertEqual(frame.plot_bounds, (0.09, 0.96, 0.80, 0.17))
+        self.assertEqual(len(CATEGORICAL_COLORS), 7)
+        self.assertTrue(NOTEBOOK_AXES.axis_below)
 
 
 class ChartFramingTest(unittest.TestCase):
@@ -63,6 +76,18 @@ class ChartFramingTest(unittest.TestCase):
             )
             self.assertFalse(ax.spines["top"].get_visible())
             self.assertFalse(ax.spines["right"].get_visible())
+            plt.close(fig)
+
+    def test_shared_legend_uses_the_editorial_frame(self):
+        with chart_canvas(notebook_frame((8, 5))) as (fig, ax):
+            ax.plot([0, 1], [0, 1], label="SERIES")
+            legend = style_legend(ax, loc="upper left")
+
+            self.assertEqual(legend.get_texts()[0].get_text(), "SERIES")
+            self.assertEqual(
+                tuple(round(value, 4) for value in legend.get_frame().get_facecolor()),
+                (0.9804, 0.9725, 0.949, 0.96),
+            )
             plt.close(fig)
 
     def test_header_rejects_more_metadata_than_the_frame_can_place(self):

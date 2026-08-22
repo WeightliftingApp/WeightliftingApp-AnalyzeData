@@ -18,6 +18,8 @@ Create a self-explanatory analytical card without changing what the analysis say
 
 Use `chart_canvas` with the closest frame preset, or `stacked_canvas` when the card needs a column of panels over one shared x axis. Use `add_header`, `style_axes`, `add_footer`, and `save_chart` for framing. Keep calculations and chart-specific marks in the generator.
 
+For charts inside `src/*.ipynb`, build a `notebook_frame` with the cell's existing `figsize`. Use `NOTEBOOK_AXES` and `style_legend`, and choose ordinary comparison colors from `CATEGORICAL_COLORS`. Keep the notebook interactive with `plt.show()` instead of saving inside the cell. Every notebook chart cell must import or use the shared module. A notebook with no chart cell needs no cosmetic import.
+
 Use the shared palette by meaning, not by convenience. Neutral marks provide context. Use `PALETTE.frontier` for an established Pareto frontier or a modeled series, and `PALETTE.advance` for a new checkpoint. Use positive and negative colors for trend residuals, and cut and bulk colors for phase paths and phase labels. Use `PALETTE.reference` for a reference construct plotted beside a model rather than produced by it. Annotate the latest scan, new frontier point, or other claim close to its mark.
 
 If no palette entry carries the meaning you need, add one field with a name that states the meaning. Do not reuse a documented color for a second concept, and do not add a field that duplicates an existing hex.
@@ -35,7 +37,7 @@ These rules are non-negotiable during a style migration:
 - Keep output filename, pixel dimensions, aspect ratio, and DPI unless the task documents an improvement.
 - During a migration, render the existing source data. Never replace it with a synthetic history merely to make the generator run. Synthetic data belongs in focused tests or a clearly labeled new-chart prototype.
 - Do not replace a domain calculation with visual shorthand.
-- Do not churn notebooks or unrelated generators.
+- When the request targets one generator, do not churn unrelated notebooks. When it explicitly targets the notebook collection, migrate every chart-producing cell and record notebooks with no charts in the review notes.
 - Never commit source personal data, generated outputs, baseline images, or comparison artifacts.
 
 ## Verify the result

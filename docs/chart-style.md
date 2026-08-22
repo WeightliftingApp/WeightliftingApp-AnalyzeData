@@ -17,11 +17,14 @@ The preserved pre-refactor images live under `.artifacts/chart-baselines/2026-08
 `src/chart_style.py` owns the frame around a chart:
 
 - `PALETTE` contains paper, ink, neutral, and semantic colors.
+- `CATEGORICAL_COLORS` is the ordered series palette for notebook comparisons that do not carry a stronger domain meaning.
 - `TOPOGRAPHY_FRAME`, `PARETO_FRAME`, and `FORECAST_FRAME` fix canvas size, DPI, plot bounds, header coordinates, and footer coordinates.
+- `notebook_frame` keeps a notebook chart's existing figure size while giving it the shared card margins and typography.
 - `chart_canvas` creates the paper and panel backgrounds inside a controlled Matplotlib context.
 - `stacked_canvas` does the same for a column of panels that share one x axis. Use it when a card measures two different quantities against the same x quantity, rather than hanging a second y axis off one panel.
 - `add_header` places the title, subtitle, and two compact metadata rows.
 - `style_axes` applies deliberate grids, ticks, and open top and right spines.
+- `style_legend` gives notebook legends the shared panel, border, and monospace text treatment.
 - `add_footer` places the model note and reading key.
 - `save_chart` creates the destination directory, saves the full figure background, and closes the figure.
 
@@ -40,6 +43,14 @@ Chart generators still own data selection, marks, annotations, axis limits, unit
 ## Information contract
 
 A style migration must preserve every plotted observation and frontier point, axis meaning and units, date and count metadata, direct annotations, legends, and model footers. Preserve pixel dimensions and DPI unless the task records a specific reason to change them.
+
+## Notebook charts
+
+All chart-producing cells under `src/*.ipynb` use this style. Start with `notebook_frame` and the cell's existing `figsize`, then use `chart_canvas`, `add_header`, `style_axes`, and `add_footer`. Use `stacked_canvas` when multiple measures need separate panels. A twin axis is acceptable only when the two scales must align in time and separating them would hide the comparison.
+
+Use semantic colors when a mark has one of the meanings documented above. Use `CATEGORICAL_COLORS` for ordinary exercise, year, or metric series. Do not rely on Matplotlib's default color cycle.
+
+The preserved notebook outputs from before the migration live under `.artifacts/chart-baselines/2026-08-22-notebooks-pre-shared-style`. The after outputs and side-by-side sheets belong under `.artifacts/chart-comparisons/notebooks`. Keep all three folders ignored.
 
 ## Comparing against the baselines
 
