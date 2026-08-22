@@ -48,8 +48,8 @@ def render_hero(output_dir: Path) -> Path:
         add_header(
             fig,
             frame,
-            "ESTIMATED 1RM ROSE 41 LB",
-            "Eight synthetic training blocks demonstrating one answer-first finding",
+            "Estimated 1RM Progression",
+            "Eight synthetic training blocks with the total change annotated",
             ("8 BLOCKS", "REFERENCE DATA"),
         )
         add_footer(
@@ -93,7 +93,7 @@ def render_comparison(output_dir: Path) -> Path:
         add_header(
             fig,
             frame,
-            "DEADLIFT FINISHED WITH THE STRONGEST TREND",
+            "Big Three Relative Progression",
             "Direct labels replace a legend when every series has a meaningful endpoint",
             (),
         )
@@ -122,7 +122,7 @@ def render_diagnostic(output_dir: Path) -> Path:
         add_header(
             fig,
             frame,
-            "RESIDUALS REMAIN CENTERED ACROSS THE FITTED RANGE",
+            "Residuals Across the Fitted Range",
             "Dense diagnostic evidence receives more canvas and a quieter header",
             ("36 POINTS",),
         )

@@ -140,11 +140,9 @@ short_exercise_labels = {
             "    style_axes(ax, NOTEBOOK_AXES)\n    style_legend(ax, loc=\"lower right\")",
             context="big-three dense-label fallback",
         )
-    text = replace_once(
-        text,
-        '        "Big Three Strength Progression (1RMe)",',
+    text = text.replace(
         '        "BIG THREE PR FRONTIERS KEEP MOVING UP",',
-        context="big-three title",
+        '        "Big Three Strength Progression (1RMe)",',
     )
     text = collapse_duplicate(text, "    ChartArchetype,\n")
     text = collapse_duplicate(text, "    progression_lines = []\n")
@@ -210,11 +208,9 @@ short_exercise_labels = {
         "    style_axes(ax, NOTEBOOK_AXES)\n    ax.margins(x=0.12)\n    label_line_ends(\n        ax, projection_lines, labels=projection_labels, min_gap_points=16\n    )\n    fig.autofmt_xdate()",
         context="big-three projection labels",
     )
-    text = replace_once(
-        text,
-        '        "Big Three Historical Trends and One-Year Projections",',
+    text = text.replace(
         '        "RECENT BIG THREE RATES, PROJECTED ONE YEAR",',
-        context="big-three projection title",
+        '        "Big Three Historical Trends and One-Year Projections",',
     )
     text = collapse_duplicate(
         text, "    projection_lines = []\n    projection_labels = []\n"
@@ -226,9 +222,8 @@ def migrate_pr_szn(notebook: dict) -> None:
     cell = notebook["cells"][5]
     text = source(cell)
     text = text.replace(
-        "MONTHLY PR COUNTS SHOW REPEATED SEASONAL PEAKS",
-        "MONTHLY PR COUNTS SHOW REPEATED ANNUAL PEAKS",
-    )
+        "MONTHLY PR COUNTS SHOW REPEATED SEASONAL PEAKS", "PR SZN!!"
+    ).replace("MONTHLY PR COUNTS SHOW REPEATED ANNUAL PEAKS", "PR SZN!!")
     text = replace_once(
         text,
         "    PALETTE,\n",
@@ -250,7 +245,7 @@ def migrate_pr_szn(notebook: dict) -> None:
     text = replace_once(
         text,
         '        fig, frame, "PR SZN!!",\n        "Tracking PRs over my lifting career\\nShowing monthly PR counts with yearly peak annotations",',
-        '        fig, frame, "MONTHLY PR COUNTS SHOW REPEATED ANNUAL PEAKS",\n        "1RMe and volume records since 2018, with July-to-June peak annotations",',
+        '        fig, frame, "PR SZN!!",\n        "1RMe and volume records since 2018, with July-to-June peak annotations",',
         context="PR monthly title",
     )
     text = collapse_duplicate(text, "    AnnotationKind,\n    ChartArchetype,\n")
@@ -270,10 +265,14 @@ def migrate_pr_szn(notebook: dict) -> None:
 
     cell = notebook["cells"][7]
     text = source(cell)
+    text = text.replace(
+        '        f"AGGREGATE 1RM FRONTIER REACHED {total_weights[-1]:,.0f} LB",',
+        '        "Total One Rep Max Progress",',
+    )
     text = replace_once(
         text,
         'add_header(fig, frame, "Total One Rep Max Progress", "", ())',
-        'add_header(\n        fig,\n        frame,\n        f"AGGREGATE 1RM FRONTIER REACHED {total_weights[-1]:,.0f} LB",\n        "Sum of current exercise-level estimated 1RM records",\n        (f"{len(total_weights):,} FRONTIER UPDATES",),\n    )',
+        'add_header(\n        fig,\n        frame,\n        "Total One Rep Max Progress",\n        "Sum of current exercise-level estimated 1RM records",\n        (f"{len(total_weights):,} FRONTIER UPDATES",),\n    )',
         context="PR aggregate title",
     )
     text = replace_once(
@@ -286,10 +285,14 @@ def migrate_pr_szn(notebook: dict) -> None:
 
     cell = notebook["cells"][8]
     text = source(cell)
+    text = text.replace(
+        '        fig, frame, f"MODEL PROJECTS {target_weight:,.0f} LB BY {target_date:%b %Y}",',
+        '        fig, frame, "Total One Rep Max Progress with Asymptotic Trendline",',
+    )
     text = replace_once(
         text,
         '        fig, frame, "Total One Rep Max Progress with Asymptotic Trendline",\n        f"(Current rate: {current_rate:.1f} lbs/year, Projected max: {popt[0]:.1f} lbs)",',
-        '        fig, frame, f"MODEL PROJECTS {target_weight:,.0f} LB BY {target_date:%b %Y}",\n        f"Asymptotic fit to aggregate 1RM records; current slope {current_rate:.1f} lb/year",',
+        '        fig, frame, "Total One Rep Max Progress with Asymptotic Trendline",\n        f"Asymptotic fit to aggregate 1RM records; current slope {current_rate:.1f} lb/year",',
         context="PR all-record model title",
     )
     text = replace_once(
@@ -302,10 +305,14 @@ def migrate_pr_szn(notebook: dict) -> None:
 
     cell = notebook["cells"][9]
     text = source(cell)
+    text = text.replace(
+        '        fig, frame, f"JULY-SNAPSHOT MODEL PROJECTS {target_weight:,.0f} LB",',
+        '        fig, frame, "Total One Rep Max Progress with Asymptotic Trendline",',
+    )
     text = replace_once(
         text,
         '        fig, frame, "Total One Rep Max Progress with Asymptotic Trendline",\n        f"(Current rate: {current_rate:.1f} lbs/year, Projected max: {popt[0]:.1f} lbs)",',
-        '        fig, frame, f"JULY-SNAPSHOT MODEL PROJECTS {target_weight:,.0f} LB",\n        f"Next July projection from annual checkpoints; current slope {current_rate:.1f} lb/year",',
+        '        fig, frame, "Total One Rep Max Progress with Asymptotic Trendline",\n        f"Next July projection from annual checkpoints; current slope {current_rate:.1f} lb/year",',
         context="PR July model title",
     )
     set_source(cell, text)
@@ -376,7 +383,7 @@ with stacked_canvas(frame, (1, 1, 1), hspace=0.13) as (
     add_header(
         fig,
         frame,
-        "HOW BODYWEIGHT CHANGES THE WILKS LIFT MULTIPLIER",
+        "Body Weight vs. Strength Progression with Wilks Multiplier",
         "Aligned panels preserve time while giving each measure an honest scale",
         (),
     )
@@ -418,8 +425,12 @@ def migrate_wilks(notebook: dict) -> None:
     set_source(cell, text)
 
     cell = notebook["cells"][2]
+    text = source(cell).replace(
+        "HOW BODYWEIGHT CHANGES THE WILKS LIFT MULTIPLIER",
+        "Body Weight vs. Strength Progression with Wilks Multiplier",
+    )
     text = replace_block(
-        source(cell),
+        text,
         "# Create the plot with three y-axes\n",
         "    plt.show()",
         WILKS_STACKED,
@@ -515,7 +526,7 @@ with stacked_canvas(frame, (1, 1, 1), hspace=0.13) as (
     add_header(
         fig,
         frame,
-        "BODYWEIGHT AND TRAINING DENSITY, ON HONEST SCALES",
+        "Body Weight and Workout Intensity Over Time",
         (
             f"Latest 30-day density: {latest_volume_density:,.0f} volume/hour and "
             f"{latest_set_density:.1f} sets/hour"
@@ -538,7 +549,10 @@ with stacked_canvas(frame, (1, 1, 1), hspace=0.13) as (
 
 def migrate_workout_intensity(notebook: dict) -> None:
     cell = notebook["cells"][2]
-    text = source(cell)
+    text = source(cell).replace(
+        '        f"LATEST 30-DAY WORKOUTS AVERAGED {rolling_avg.dropna().iloc[-1]:.0f} MINUTES",',
+        '        "30-Day Rolling Average Workout Duration (Since Oct 2018)",',
+    )
     text = replace_once(
         text,
         "    PALETTE,\n",
@@ -560,18 +574,22 @@ def migrate_workout_intensity(notebook: dict) -> None:
     text = replace_once(
         text,
         '        "30-Day Rolling Average Workout Duration (Since Oct 2018)",\n        "Time-based rolling mean of recorded workout duration",',
-        '        f"LATEST 30-DAY WORKOUTS AVERAGED {rolling_avg.dropna().iloc[-1]:.0f} MINUTES",\n        "Time-based rolling mean of recorded workout duration since October 2018",',
+        '        "30-Day Rolling Average Workout Duration (Since Oct 2018)",\n        "Time-based rolling mean of recorded workout duration since October 2018",',
         context="workout duration title",
     )
     set_source(cell, text)
 
     cell = notebook["cells"][3]
+    text = source(cell).replace(
+        "BODYWEIGHT AND TRAINING DENSITY, ON HONEST SCALES",
+        "Body Weight and Workout Intensity Over Time",
+    )
     text = replace_block(
-        source(cell),
+        text,
         "# Create the plot with three y-axes\n",
         "    plt.show()",
         WORKOUT_STACKED,
-        sentinel="BODYWEIGHT AND TRAINING DENSITY, ON HONEST SCALES",
+        sentinel="LINES = 30-DAY SUM / 30-DAY HOURS",
         context="workout stacked redesign",
     )
     set_source(cell, text)
@@ -579,7 +597,10 @@ def migrate_workout_intensity(notebook: dict) -> None:
 
 def migrate_users(notebook: dict) -> None:
     cell = notebook["cells"][4]
-    text = source(cell)
+    text = source(cell).replace(
+        '        f"TOP 1% OF RECORDED BENCH 1RMS STARTS NEAR {percentile_99:.0f} LB",',
+        '        "Distribution of Bench Press 1RMs Across All Users",',
+    )
     text = replace_once(
         text,
         "    PALETTE,\n",
@@ -622,8 +643,8 @@ def migrate_users(notebook: dict) -> None:
     text = replace_once(
         text,
         '        "Distribution of Bench Press 1RMs Across All Users",\n        "Estimated one-rep maxima from every recorded bench press exercise",',
-        '        f"TOP 1% OF RECORDED BENCH 1RMS STARTS NEAR {percentile_99:.0f} LB",\n        "All-user estimated one-rep-max distribution with directly labeled thresholds",',
-        context="users answer-first title",
+        '        "Distribution of Bench Press 1RMs Across All Users",\n        "All-user estimated one-rep-max distribution with directly labeled thresholds",',
+        context="users descriptive title",
     )
     text = replace_once(
         text,

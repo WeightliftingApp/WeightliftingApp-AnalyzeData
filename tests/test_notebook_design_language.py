@@ -39,20 +39,25 @@ class NotebookDesignLanguageTest(unittest.TestCase):
             self.assertIn("ChartArchetype.", chart)
             self.assertNotIn("twinx(", chart)
         self.assertIn("PANELS SHARE TIME, NOT UNITS", wilks)
-        self.assertIn("BODYWEIGHT AND TRAINING DENSITY, ON HONEST SCALES", intensity)
+        self.assertIn("Body Weight and Workout Intensity Over Time", intensity)
+        self.assertIn(
+            "Body Weight vs. Strength Progression with Wilks Multiplier", wilks
+        )
 
-    def test_priority_titles_and_labels_state_their_evidence_role(self):
+    def test_priority_titles_stay_descriptive_while_labels_carry_evidence(self):
         big_three = cell_source("analyze_big_three.ipynb", 3)
         projection = cell_source("analyze_big_three.ipynb", 4)
         prs = cell_source("analyze_pr_szn.ipynb", 5)
         users = cell_source("analyze_users.ipynb", 4)
 
-        self.assertIn("BIG THREE PR FRONTIERS KEEP MOVING UP", big_three)
+        self.assertIn("Big Three Strength Progression (1RMe)", big_three)
         self.assertIn('style_legend(ax, loc="lower right")', big_three)
         self.assertIn("label_line_ends(", projection)
-        self.assertIn("REPEATED ANNUAL PEAKS", prs)
+        self.assertIn("Big Three Historical Trends and One-Year Projections", projection)
+        self.assertIn("PR SZN!!", prs)
+        self.assertNotIn("REPEATED ANNUAL PEAKS", prs)
         self.assertNotIn("SEASONAL PEAKS", prs)
-        self.assertIn("TOP 1% OF RECORDED BENCH 1RMS", users)
+        self.assertIn("Distribution of Bench Press 1RMs Across All Users", users)
         self.assertIn("annotate_reference_line(", users)
 
 

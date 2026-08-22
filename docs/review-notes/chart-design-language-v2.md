@@ -25,7 +25,7 @@ The 26 notebook images produced after the first shared-style migration were copi
 ### Problems to address
 
 - One frame treatment is carrying hero findings, ordinary comparisons, and dense diagnostics.
-- Several notebook titles name a metric instead of stating the finding.
+- Several notebook titles and subtitles lack a consistent hierarchy, even when their descriptive wording should remain.
 - Dense multi-series charts rely on legends even when endpoint labels would be easier to follow.
 - The workout-intensity chart uses three y axes, which makes scale association unnecessarily difficult.
 - Percentile and uncertainty conventions are chart-specific instead of shared.
@@ -35,7 +35,7 @@ The 26 notebook images produced after the first shared-style migration were copi
 
 - Keep chart-specific calculations in their notebooks and generators. Shared code may own visual grammar but may not infer domain meaning.
 - Extend `notebook_frame` with an explicit archetype while preserving its current comparison behavior as the default.
-- Treat answer-first titles as a content rule, not an automated transformation. A title must remain supportable by the plotted data.
+- Keep titles descriptive and close to the established notebook voice. Put findings in annotations and explanatory context in subtitles or footers.
 - Use direct labels for a small number of lines. Keep legends when labels would collide or when marks do not have meaningful endpoints.
 - Replace the three-axis workout-intensity view with aligned stacked panels because all measures share time but not units.
 - Keep categorical colors where categories are the subject. Use neutral context plus one accent when the chart has a single intended finding.
@@ -45,6 +45,7 @@ The 26 notebook images produced after the first shared-style migration were copi
 - Describe the PR pattern as repeated annual peaks, not seasonal peaks. The chart marks one peak in each July-to-June window, but the peak month moves enough that a seasonal claim is not supported.
 - Use the shared `REFERENCE` tag for the histogram's mean and upper-percentile thresholds. They share one semantic role and are distinguished by direct text rather than decorative colors.
 - Apply the shared `LATEST`, `REFERENCE`, `ESTIMATE`, and interval primitives to the DEXA muscle-gain card so the strongest existing analysis also exercises the new language.
+- The first v2 pass made several titles into headline conclusions. User review found that tone too prescriptive, so the titles were restored to descriptive names without reverting the layouts, annotations, uncertainty treatment, or stacked panels.
 
 ## Shortcuts
 
@@ -72,6 +73,7 @@ The 26 notebook images produced after the first shared-style migration were copi
 - Built the v1-to-v2 gallery with 26 baselines, 26 current images, 26 pairs, no missing images, and no additions. Twelve images changed; the other fourteen serve as unchanged controls.
 - Reviewed the complete overview and the big-three, PR, user-distribution, Wilks, workout-intensity, golden-example, and DEXA images at full size.
 - Regenerated the DEXA muscle-gain report and chart from the nine local scans after adopting the shared annotation and interval primitives. The estimate remains 1.4 lb unrounded with a model-based 95% interval of -2.8 to +6.1 lb.
+- After title-tone review, restored descriptive titles across the five priority notebook groups and three golden cards, re-executed all five notebooks, and rebuilt the complete 26-pair comparison gallery.
 - Final repository suite: 237 tests and 46 subtests passed in the integration environment.
 
 ## Next steps
@@ -80,4 +82,4 @@ The 26 notebook images produced after the first shared-style migration were copi
 2. Consider a separate pass on the PR heatmap, bodyweight ridgeline, and dense workout scatter charts. They were unchanged controls in this pass.
 3. Add an accessibility review with grayscale and common color-vision simulations if these charts will be published outside the notebooks.
 4. Rebuild the gallery after Matplotlib, pandas, or JoyPy upgrades.
-5. If the design direction is accepted, extend archetype declarations and answer-first titles to the unchanged controls in a separate reviewable pass.
+5. If the design direction is accepted, extend archetype declarations and descriptive title hierarchy to the unchanged controls in a separate reviewable pass.

@@ -34,13 +34,13 @@ Chart generators still own data selection, marks, annotations, axis limits, unit
 
 Choose the chart's job before choosing marks. Notebook cards use one of three archetypes:
 
-- **Hero:** one defensible conclusion supported by one primary view. Use an answer-first title, a prominent evidence annotation, and enough subtitle or footer text to make the claim intelligible on its own.
+- **Hero:** one primary subject supported by one primary view. Use a concise descriptive title, a prominent evidence annotation, and enough subtitle or footer text to make the chart intelligible on its own.
 - **Comparison:** two to six series or categories whose relationship is the subject. Use direct endpoint labels when they remain legible; keep a legend when series do not have meaningful endpoints or labels would collide.
 - **Diagnostic:** dense exploratory evidence, residuals, distributions, or model checks. Give the data more canvas and the header less visual weight. A diagnostic title should name the question or check without overstating a conclusion.
 
 Pass the choice explicitly with `notebook_frame(..., archetype="hero" | "comparison" | "diagnostic")`. The default remains `comparison` for compatibility, but new or deliberately redesigned charts should name their archetype.
 
-An answer-first title states the finding rather than repeating the axis labels. The subtitle owns measurement context and methodology. Do not generate a conclusion mechanically from a noisy endpoint or use causal language for a descriptive chart.
+A title names the analysis in the repository's established notebook voice. Put findings in annotations and explanatory context in the subtitle or footer. Do not turn a noisy endpoint into a headline or use causal language for a descriptive chart.
 
 ## Annotation vocabulary
 

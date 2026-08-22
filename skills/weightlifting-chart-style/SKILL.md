@@ -22,7 +22,7 @@ For charts inside `src/*.ipynb`, build a `notebook_frame` with the cell's existi
 
 Use the shared palette by meaning, not by convenience. Neutral marks provide context. Use `PALETTE.frontier` for an established Pareto frontier or a modeled series, and `PALETTE.advance` for a new checkpoint. Use positive and negative colors for trend residuals, and cut and bulk colors for phase paths and phase labels. Use `PALETTE.reference` for a reference construct plotted beside a model rather than produced by it. Annotate the latest scan, new frontier point, or other claim close to its mark.
 
-Choose an explicit notebook archetype. Use `hero` for one answer-first finding, `comparison` for a relationship among a small set of series, and `diagnostic` for dense exploratory or model-checking evidence. A hero title states a defensible result. A diagnostic title names the check without manufacturing a conclusion.
+Choose an explicit notebook archetype. Use `hero` for one primary subject, `comparison` for a relationship among a small set of series, and `diagnostic` for dense exploratory or model-checking evidence. Titles stay descriptive and use the repository's established notebook voice. Put findings in annotations instead of manufacturing a headline conclusion.
 
 Use `annotate_point` or `annotate_reference_line` for the shared `LATEST`, `NEW HIGH`, `CHANGE`, `ESTIMATE`, `95% RANGE`, and `REFERENCE` vocabulary. Use `label_line_ends` for at most six endpoint-readable lines. Use `plot_estimate_interval` for one central estimate with complete bounds. Callers still choose evidence coordinates, precise text, and whether the statistical interval is valid.
 
