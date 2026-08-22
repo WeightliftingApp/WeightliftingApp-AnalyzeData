@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "weightlifting-app-analysis"
+version = "0.1.0"
+description = "Notebook-based analysis of Weightlifting App exports"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+dependencies = [
+    "matplotlib",
+    "numpy",
+    "openpyxl",
+    "pandas",
+]
+
+[project.optional-dependencies]
+notebooks = [
+    "joypy",
+    "jupyter",
+    "scipy",
+    "seaborn",
+    "tqdm",
+]
+dev = [
+    "pytest>=8",
+]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+py-modules = [
+    "analysis_utils",
+    "training_dataset",
+    "training_program_analysis",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

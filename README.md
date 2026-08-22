@@ -16,6 +16,16 @@ You can either use your own data or use the example data provided in the `data/e
 
 3. Place your `.wld` file in the `data` folder and update the `file_path` in the `WLD` class in the notebook to the name of the file(s) you want to use.
 
+## Setup
+
+Python 3.10 or newer is required.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[notebooks]"
+```
+
 ## Usage
 
 Run any of the `.ipynb` Jupyter notebooks in the `src/` folder or create your own.
@@ -28,9 +38,17 @@ Key analyses:
 To refresh the bodyweight and DEXA CSV exports from `Weight Log.xlsx`:
 
 ```bash
-source venv/bin/activate
 python scripts/convert_weight_xlsx.py
 python scripts/convert_dexa_xlsx.py
+```
+
+## Development
+
+Install the test dependencies and run the complete suite from the repository root:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest
 ```
 
 ## Contributing

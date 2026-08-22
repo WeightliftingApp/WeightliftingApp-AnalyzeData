@@ -9,15 +9,18 @@ Analysis scripts for data exported from [Weightlifting App](https://apps.apple.c
 ## Development Setup
 
 ```bash
-# Create/activate virtual environment
-python3 -m venv venv
-source venv/bin/activate
+# Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
 
-# Install dependencies
-pip install -r requirements.txt
+# Install the project, notebook tools, and test runner
+python -m pip install -e ".[dev,notebooks]"
 
 # Run notebooks
 jupyter notebook src/
+
+# Run the complete test suite from the repository root
+python -m pytest
 ```
 
 ## Data Files
@@ -27,7 +30,8 @@ jupyter notebook src/
 
 To update weight.csv from the source spreadsheet:
 ```bash
-source venv/bin/activate && python scripts/convert_weight_xlsx.py
+source .venv/bin/activate
+python scripts/convert_weight_xlsx.py
 ```
 
 ## Architecture
