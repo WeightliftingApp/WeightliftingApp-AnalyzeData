@@ -30,6 +30,49 @@ The preserved pre-refactor images live under `.artifacts/chart-baselines/2026-08
 
 Chart generators still own data selection, marks, annotations, axis limits, units, legends, and domain calculations. Keeping that split matters. A generic chart helper should not decide what a frontier means or which DEXA interval counts as a cut.
 
+## Information hierarchy
+
+Choose the chart's job before choosing marks. Notebook cards use one of three archetypes:
+
+- **Hero:** one defensible conclusion supported by one primary view. Use an answer-first title, a prominent evidence annotation, and enough subtitle or footer text to make the claim intelligible on its own.
+- **Comparison:** two to six series or categories whose relationship is the subject. Use direct endpoint labels when they remain legible; keep a legend when series do not have meaningful endpoints or labels would collide.
+- **Diagnostic:** dense exploratory evidence, residuals, distributions, or model checks. Give the data more canvas and the header less visual weight. A diagnostic title should name the question or check without overstating a conclusion.
+
+Pass the choice explicitly with `notebook_frame(..., archetype="hero" | "comparison" | "diagnostic")`. The default remains `comparison` for compatibility, but new or deliberately redesigned charts should name their archetype.
+
+An answer-first title states the finding rather than repeating the axis labels. The subtitle owns measurement context and methodology. Do not generate a conclusion mechanically from a noisy endpoint or use causal language for a descriptive chart.
+
+## Annotation vocabulary
+
+Use the smallest applicable shared tag:
+
+- `LATEST` identifies the newest observation.
+- `NEW HIGH` identifies a newly established frontier or record.
+- `CHANGE` identifies a measured endpoint delta.
+- `ESTIMATE` identifies a modeled central value.
+- `95% RANGE` identifies uncertainty, never a guarantee.
+- `REFERENCE` identifies a target, threshold, or comparison construct.
+
+`annotate_point` and `annotate_reference_line` own the tag typography, connector, marker, and semantic color. Callers own the evidence coordinates and exact detail text. Do not use these tags as decorative badges disconnected from a plotted mark.
+
+Use `plot_estimate_interval` for a single central estimate with complete lower and upper bounds. Use a shaded band when the interval changes over a continuous x axis. Observed and modeled series must also differ by mark or line style, not color alone.
+
+## Labels and formatting
+
+Use `label_line_ends` for no more than six lines. It separates nearby label baselines and rejects larger collections. Add right-side x margin when the labels need room. Keep a stable-position legend for dense collections, areas, bars, or series without meaningful endpoints.
+
+Use the shared weight, percentage, count, delta, and axis formatters. Axis labels still carry units because tick formatting may be unavailable to screen readers and cropped excerpts.
+
+Run `chart_lint.lint_figure` or `assert_chart_lint_clean` on new published cards and golden examples. The linter catches objective failures such as missing labels or declared units, default Matplotlib colors, excessive date ticks, automatic legend placement, clipped figure text, figure-text collisions, and annotation color mismatches. It does not certify the analysis or the quality of a title.
+
+Render the deterministic archetype references with:
+
+```bash
+PYTHONPATH=src:. .venv/bin/python scripts/render_chart_language_gallery.py
+```
+
+The ignored outputs live under `.artifacts/chart-language-gallery/`. They use synthetic values and are labeled as references, not personal results.
+
 ## Visual rules
 
 - Paper is `#f5f2ea`; the plot panel is `#faf8f2`.
@@ -39,6 +82,8 @@ Chart generators still own data selection, marks, annotations, axis limits, unit
 - Put explanations next to the data when space permits. Legends remain useful for repeated series, but they do not replace the highlighted-point annotation.
 - Keep the grid visible and quiet. Hide the top and right spines. Keep the left and bottom spines dark enough to establish the plot.
 - The left footer explains the model or preprocessing. The right footer explains how to read direction, color, or frontier status.
+- Do not rely on color alone. Pair semantic colors with labels, marker shapes, line styles, or spatial position.
+- Keep neutral context visually subordinate. Reserve saturated marks for the evidence named by the title or annotation.
 
 ## Information contract
 
@@ -51,6 +96,8 @@ All chart-producing cells under `src/*.ipynb` use this style. Start with `notebo
 Use semantic colors when a mark has one of the meanings documented above. Use `CATEGORICAL_COLORS` for ordinary exercise, year, or metric series. Do not rely on Matplotlib's default color cycle.
 
 The preserved notebook outputs from before the migration live under `.artifacts/chart-baselines/2026-08-22-notebooks-pre-shared-style`. The after outputs and side-by-side sheets belong under `.artifacts/chart-comparisons/notebooks`. Keep all three folders ignored.
+
+The design-language v2 baseline lives under `.artifacts/chart-baselines/2026-08-22-pre-design-language-v2`. Its comparison gallery lives under `.artifacts/chart-comparisons/notebooks-v2`. Run `scripts/upgrade_notebook_design_language.py --check` to verify that the five priority notebooks still contain the reviewed migration.
 
 After executing the notebooks, rebuild the review gallery with:
 

@@ -22,6 +22,10 @@ For charts inside `src/*.ipynb`, build a `notebook_frame` with the cell's existi
 
 Use the shared palette by meaning, not by convenience. Neutral marks provide context. Use `PALETTE.frontier` for an established Pareto frontier or a modeled series, and `PALETTE.advance` for a new checkpoint. Use positive and negative colors for trend residuals, and cut and bulk colors for phase paths and phase labels. Use `PALETTE.reference` for a reference construct plotted beside a model rather than produced by it. Annotate the latest scan, new frontier point, or other claim close to its mark.
 
+Choose an explicit notebook archetype. Use `hero` for one answer-first finding, `comparison` for a relationship among a small set of series, and `diagnostic` for dense exploratory or model-checking evidence. A hero title states a defensible result. A diagnostic title names the check without manufacturing a conclusion.
+
+Use `annotate_point` or `annotate_reference_line` for the shared `LATEST`, `NEW HIGH`, `CHANGE`, `ESTIMATE`, `95% RANGE`, and `REFERENCE` vocabulary. Use `label_line_ends` for at most six endpoint-readable lines. Use `plot_estimate_interval` for one central estimate with complete bounds. Callers still choose evidence coordinates, precise text, and whether the statistical interval is valid.
+
 If no palette entry carries the meaning you need, add one field with a name that states the meaning. Do not reuse a documented color for a second concept, and do not add a field that duplicates an existing hex.
 
 The footer must explain the model and reading direction in plain terms. A reader should understand trimming, contour assumptions, trend residuals, or Pareto dominance from the image alone. Both footer strings share one row, so check that the widest values a generator can produce still leave a gap between them. A layout test that measures rendered text extents is cheaper than finding the collision in a published image.
@@ -55,3 +59,7 @@ Inspect the side-by-side sheets and diff images under `.artifacts/chart-comparis
 The command reads the Matplotlib version out of each PNG and gates on what those two renderers support. One renderer on both sides gets the strict `0.01` fidelity threshold. Different renderers, or a PNG that does not name one, get only a `0.15` gross-change ceiling and a refusal to certify, because a Matplotlib upgrade re-flows every string and reads as several percent on its own. Rerun under the baseline renderer, or read the sheets and pass `--accept-renderer-drift`. Never reach for `--accept-renderer-drift` to get past a difference you have not looked at, and never regenerate a baseline to make a comparison pass.
 
 Passing this broad gate does not prove semantic correctness. Treat a missing point, label, unit, legend entry, state color, or footer claim as a failure even when the image looks polished.
+
+Run the objective chart linter on new published cards and deterministic examples. Supply expected units when the linter cannot infer them. Fix default Matplotlib colors, automatic legend placement, dense date ticks, clipped figure text, and text collisions. A clean lint result does not prove that the title, annotation, or analysis is correct.
+
+Use `scripts/render_chart_language_gallery.py` when you need concrete hero, comparison, and diagnostic references. The examples are synthetic and explicitly labeled. Do not copy their claims or values into a real analysis.

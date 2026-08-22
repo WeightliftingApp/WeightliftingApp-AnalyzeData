@@ -8,12 +8,17 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
-from typing import Iterator, Sequence, Tuple
+from typing import Iterable, Iterator, Mapping, Sequence, Tuple
 
 import matplotlib.pyplot as plt
+from matplotlib.artist import Artist
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
+from matplotlib.text import Annotation
+from matplotlib.ticker import FuncFormatter
 
 
 @dataclass(frozen=True)
@@ -66,6 +71,31 @@ class AxisStyle:
     grid_width: float
     grid_alpha: float
     axis_below: bool
+
+
+class ChartArchetype(str, Enum):
+    """Information-density presets for notebook analytical cards."""
+
+    HERO = "hero"
+    COMPARISON = "comparison"
+    DIAGNOSTIC = "diagnostic"
+
+
+class AnnotationKind(str, Enum):
+    """Shared visual vocabulary for claims placed near chart evidence."""
+
+    LATEST = "LATEST"
+    NEW_HIGH = "NEW HIGH"
+    CHANGE = "CHANGE"
+    ESTIMATE = "ESTIMATE"
+    RANGE_95 = "95% RANGE"
+    REFERENCE = "REFERENCE"
+
+
+@dataclass(frozen=True)
+class AnnotationStyle:
+    color: str
+    marker: str
 
 
 PALETTE = ChartPalette()
@@ -166,25 +196,112 @@ CATEGORICAL_COLORS = (
 )
 
 
+ANNOTATION_STYLES: Mapping[AnnotationKind, AnnotationStyle] = {
+    AnnotationKind.LATEST: AnnotationStyle(PALETTE.latest, "o"),
+    AnnotationKind.NEW_HIGH: AnnotationStyle(PALETTE.advance, "D"),
+    AnnotationKind.CHANGE: AnnotationStyle(PALETTE.frontier, "o"),
+    AnnotationKind.ESTIMATE: AnnotationStyle(PALETTE.frontier, "o"),
+    AnnotationKind.RANGE_95: AnnotationStyle(PALETTE.muted, "|"),
+    AnnotationKind.REFERENCE: AnnotationStyle(PALETTE.reference, "s"),
+}
+
+
+_NOTEBOOK_ARCHETYPE_LAYOUTS = {
+    ChartArchetype.HERO: {
+        "plot_bounds": (0.09, 0.96, 0.77, 0.18),
+        "title_y": 0.93,
+        "subtitle_y": 0.88,
+        "metadata_ys": (0.928, 0.884),
+        "footer_y": 0.055,
+        "title_size": 21.5,
+        "subtitle_size": 10.8,
+        "metadata_size": 8.5,
+        "footer_sizes": (8.0, 8.0),
+    },
+    ChartArchetype.COMPARISON: {
+        "plot_bounds": (0.09, 0.96, 0.80, 0.17),
+        "title_y": 0.93,
+        "subtitle_y": 0.885,
+        "metadata_ys": (0.928, 0.888),
+        "footer_y": 0.055,
+        "title_size": 20.0,
+        "subtitle_size": 10.5,
+        "metadata_size": 8.5,
+        "footer_sizes": (8.0, 8.0),
+    },
+    ChartArchetype.DIAGNOSTIC: {
+        "plot_bounds": (0.08, 0.97, 0.84, 0.14),
+        "title_y": 0.945,
+        "subtitle_y": 0.902,
+        "metadata_ys": (0.942, 0.904),
+        "footer_y": 0.045,
+        "title_size": 16.0,
+        "subtitle_size": 9.5,
+        "metadata_size": 7.8,
+        "footer_sizes": (7.4, 7.4),
+    },
+}
+
+
 def notebook_frame(
-    figsize: Tuple[float, float], *, dpi: int = 100,
+    figsize: Tuple[float, float],
+    *,
+    dpi: int = 100,
+    archetype: ChartArchetype | str = ChartArchetype.COMPARISON,
 ) -> ChartFrame:
-    """Create an editorial frame without changing a notebook chart's size."""
+    """Create an archetype-aware frame without changing a chart's size."""
+    try:
+        resolved_archetype = ChartArchetype(archetype)
+    except ValueError as exc:
+        choices = ", ".join(item.value for item in ChartArchetype)
+        raise ValueError(f"unknown chart archetype {archetype!r}; choose {choices}") from exc
+    layout = _NOTEBOOK_ARCHETYPE_LAYOUTS[resolved_archetype]
     return ChartFrame(
         figsize=figsize,
         dpi=dpi,
-        plot_bounds=(0.09, 0.96, 0.80, 0.17),
+        plot_bounds=layout["plot_bounds"],
         header_left=0.075,
         header_right=0.95,
-        title_y=0.93,
-        subtitle_y=0.885,
-        metadata_ys=(0.928, 0.888),
-        footer_y=0.055,
-        title_size=20,
-        subtitle_size=10.5,
-        metadata_size=8.5,
-        footer_sizes=(8.0, 8.0),
+        title_y=layout["title_y"],
+        subtitle_y=layout["subtitle_y"],
+        metadata_ys=layout["metadata_ys"],
+        footer_y=layout["footer_y"],
+        title_size=layout["title_size"],
+        subtitle_size=layout["subtitle_size"],
+        metadata_size=layout["metadata_size"],
+        footer_sizes=layout["footer_sizes"],
     )
+
+
+def format_weight(value: float, *, decimals: int = 0, unit: str = "lb") -> str:
+    """Format a weight with repository-standard grouping and units."""
+    return f"{value:,.{decimals}f} {unit}"
+
+
+def format_percent(value: float, *, decimals: int = 0, signed: bool = False) -> str:
+    """Format a percentage that is already expressed on a 0-to-100 scale."""
+    sign = "+" if signed else ""
+    return f"{value:{sign}.{decimals}f}%"
+
+
+def format_count(value: float) -> str:
+    """Format an integer count with thousands separators."""
+    return f"{round(value):,}"
+
+
+def format_delta(value: float, *, decimals: int = 1, unit: str = "lb") -> str:
+    """Format a signed change with units."""
+    return f"{value:+,.{decimals}f} {unit}"
+
+
+def weight_axis_formatter(*, decimals: int = 0, unit: str = "lb") -> FuncFormatter:
+    """Return a Matplotlib formatter for weight axes."""
+    return FuncFormatter(lambda value, _: format_weight(value, decimals=decimals, unit=unit))
+
+
+def percent_axis_formatter(*, decimals: int = 0) -> FuncFormatter:
+    """Return a Matplotlib formatter for percentage axes."""
+    return FuncFormatter(lambda value, _: format_percent(value, decimals=decimals))
 
 
 def frame_figure(fig: Figure, frame: ChartFrame) -> None:
@@ -319,6 +436,248 @@ def style_legend(ax: Axes, **kwargs):
         **kwargs,
     )
     return legend
+
+
+def annotation_style(kind: AnnotationKind | str) -> AnnotationStyle:
+    """Resolve a shared annotation kind to its color and marker."""
+    try:
+        resolved_kind = AnnotationKind(kind)
+    except ValueError as exc:
+        choices = ", ".join(item.value for item in AnnotationKind)
+        raise ValueError(f"unknown annotation kind {kind!r}; choose {choices}") from exc
+    return ANNOTATION_STYLES[resolved_kind]
+
+
+def annotate_point(
+    ax: Axes,
+    x,
+    y: float,
+    detail: str,
+    *,
+    kind: AnnotationKind | str,
+    xytext: Tuple[float, float] = (8, 10),
+    ha: str = "left",
+    va: str = "bottom",
+    mark: bool = True,
+) -> Annotation:
+    """Mark evidence with a standard tag and a short chart-specific detail."""
+    resolved_kind = AnnotationKind(kind)
+    visual = annotation_style(resolved_kind)
+    if mark:
+        ax.scatter(
+            [x],
+            [y],
+            color=visual.color,
+            marker=visual.marker,
+            s=54,
+            edgecolor=PALETTE.panel,
+            linewidth=0.9,
+            zorder=6,
+        )
+    annotation = ax.annotate(
+        f"{resolved_kind.value}  {detail}",
+        xy=(x, y),
+        xytext=xytext,
+        textcoords="offset points",
+        ha=ha,
+        va=va,
+        family=MONO_FONT,
+        fontsize=8.5,
+        fontweight="bold",
+        color=visual.color,
+        arrowprops={
+            "arrowstyle": "-",
+            "color": visual.color,
+            "linewidth": 0.8,
+            "alpha": 0.72,
+        },
+        annotation_clip=False,
+    )
+    annotation.set_gid(f"annotation:{resolved_kind.name.lower()}")
+    return annotation
+
+
+def annotate_reference_line(
+    ax: Axes,
+    x: float,
+    detail: str,
+    *,
+    kind: AnnotationKind | str = AnnotationKind.REFERENCE,
+    y: float = 0.96,
+    linestyle: str = "--",
+) -> Tuple[Line2D, Annotation]:
+    """Draw and directly label a vertical threshold or summary statistic."""
+    resolved_kind = AnnotationKind(kind)
+    visual = annotation_style(resolved_kind)
+    line = ax.axvline(
+        x,
+        color=visual.color,
+        linestyle=linestyle,
+        linewidth=1.2,
+        alpha=0.9,
+    )
+    line.set_gid(f"reference-line:{resolved_kind.name.lower()}")
+    label = ax.annotate(
+        f"{resolved_kind.value}\n{detail}",
+        xy=(x, y),
+        xycoords=ax.get_xaxis_transform(),
+        xytext=(4, -2),
+        textcoords="offset points",
+        ha="left",
+        va="top",
+        family=MONO_FONT,
+        fontsize=7.8,
+        fontweight="bold",
+        color=visual.color,
+        annotation_clip=False,
+    )
+    label.set_gid(f"annotation:{resolved_kind.name.lower()}")
+    return line, label
+
+
+def _last_finite_point(line: Line2D) -> Tuple[object, float]:
+    points = [
+        (x, float(y))
+        for x, y in zip(line.get_xdata(orig=False), line.get_ydata(orig=False))
+        if y is not None and float(y) == float(y)
+    ]
+    if not points:
+        raise ValueError("cannot label a line without a finite y value")
+    return points[-1]
+
+
+def label_line_ends(
+    ax: Axes,
+    lines: Iterable[Line2D],
+    *,
+    labels: Sequence[str] | None = None,
+    min_gap_points: float = 12,
+    x_offset_points: float = 7,
+    y_offsets_points: Sequence[float] | None = None,
+    max_labels: int = 6,
+) -> Tuple[Annotation, ...]:
+    """Direct-label line endpoints while separating nearby label baselines."""
+    line_list = list(lines)
+    if not line_list:
+        return ()
+    if len(line_list) > max_labels:
+        raise ValueError(
+            f"direct labels support at most {max_labels} lines; use a legend or highlight fewer"
+        )
+    resolved_labels = list(labels) if labels is not None else [line.get_label() for line in line_list]
+    if len(resolved_labels) != len(line_list):
+        raise ValueError("labels must match the number of lines")
+    resolved_y_offsets = (
+        list(y_offsets_points)
+        if y_offsets_points is not None
+        else [0.0] * len(line_list)
+    )
+    if len(resolved_y_offsets) != len(line_list):
+        raise ValueError("y offsets must match the number of lines")
+    if any(not label or label.startswith("_") for label in resolved_labels):
+        raise ValueError("every directly labeled line needs a visible label")
+
+    ax.figure.canvas.draw()
+    renderer = ax.figure.canvas.get_renderer()
+    axes_box = ax.get_window_extent(renderer)
+    gap_pixels = min_gap_points * ax.figure.dpi / 72
+    endpoints = []
+    for line, label, y_offset_points in zip(
+        line_list, resolved_labels, resolved_y_offsets
+    ):
+        x, y = _last_finite_point(line)
+        display_x, display_y = ax.transData.transform((x, y))
+        endpoints.append(
+            {
+                "line": line,
+                "label": label,
+                "x": x,
+                "y": y,
+                "display_x": display_x,
+                "display_y": display_y,
+                "label_y": display_y + y_offset_points * ax.figure.dpi / 72,
+            }
+        )
+
+    ordered = sorted(endpoints, key=lambda item: item["label_y"])
+    for previous, current in zip(ordered, ordered[1:]):
+        current["label_y"] = max(
+            current["label_y"], previous["label_y"] + gap_pixels
+        )
+    upper_limit = axes_box.y1 - gap_pixels / 2
+    if ordered[-1]["label_y"] > upper_limit:
+        shift = ordered[-1]["label_y"] - upper_limit
+        for item in ordered:
+            item["label_y"] -= shift
+    lower_limit = axes_box.y0 + gap_pixels / 2
+    if ordered[0]["label_y"] < lower_limit:
+        shift = lower_limit - ordered[0]["label_y"]
+        for item in ordered:
+            item["label_y"] += shift
+
+    annotations = []
+    for item in endpoints:
+        offset_y_points = (
+            item["label_y"] - item["display_y"]
+        ) * 72 / ax.figure.dpi
+        color = item["line"].get_color()
+        annotation = ax.annotate(
+            item["label"],
+            xy=(item["x"], item["y"]),
+            xytext=(x_offset_points, offset_y_points),
+            textcoords="offset points",
+            ha="left",
+            va="center",
+            family=MONO_FONT,
+            fontsize=8.2,
+            fontweight="bold",
+            color=color,
+            arrowprops={
+                "arrowstyle": "-",
+                "color": color,
+                "linewidth": 0.75,
+                "alpha": 0.65,
+            },
+            annotation_clip=False,
+        )
+        annotation.set_gid("direct-label")
+        annotations.append(annotation)
+    return tuple(annotations)
+
+
+def plot_estimate_interval(
+    ax: Axes,
+    *,
+    estimate: float,
+    low: float,
+    high: float,
+    y: float,
+    color: str = PALETTE.frontier,
+    label: str | None = None,
+    marker: str = "o",
+    markersize: float = 7,
+    linewidth: float = 2,
+    capsize: float = 5,
+) -> Artist:
+    """Plot one estimate and its complete interval with standard geometry."""
+    if low > estimate or estimate > high:
+        raise ValueError("estimate interval must satisfy low <= estimate <= high")
+    container = ax.errorbar(
+        estimate,
+        y,
+        xerr=[[estimate - low], [high - estimate]],
+        fmt=marker,
+        markersize=markersize,
+        color=color,
+        ecolor=color,
+        elinewidth=linewidth,
+        capsize=capsize,
+        capthick=1.2,
+        label=label,
+        zorder=5,
+    )
+    container.lines[0].set_gid("estimate-point")
+    return container
 
 
 def add_footer(
