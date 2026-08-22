@@ -61,6 +61,7 @@ The 26 notebook images produced after the first shared-style migration were copi
 - The first golden hero and comparison titles collided with metadata or exceeded the canvas. The new linter caught both before the examples were accepted.
 - Several embedded PNG dimensions changed by a few pixels because Matplotlib crops notebook output around new text extents. The two stacked redesigns intentionally changed height by roughly 50 percent. The v2 report records every before and after dimension.
 - The all-user archive remains the slowest validation input. Its notebook executed successfully but took several minutes.
+- Headless execution stored 766 transient tqdm frames while loading the all-user archive. The migration removes only those progress frames and retains the final loaded-file summary, chart, and analysis output.
 
 ## Validation log
 

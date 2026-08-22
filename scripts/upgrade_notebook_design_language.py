@@ -17,6 +17,11 @@ def set_source(cell: dict, value: str) -> None:
     cell["source"] = value.splitlines(keepends=True)
 
 
+def output_text(output: dict) -> str:
+    value = output.get("text", "")
+    return "".join(value) if isinstance(value, list) else value
+
+
 def replace_once(text: str, old: str, new: str, *, context: str) -> str:
     if new in text:
         return text
@@ -633,6 +638,15 @@ def migrate_users(notebook: dict) -> None:
         context="users footer",
     )
     set_source(cell, text)
+
+    # Tqdm emits hundreds of carriage-return frames under nbconvert. Keep the
+    # final loaded-file summary while dropping progress-only stream records.
+    load_cell = notebook["cells"][2]
+    load_cell["outputs"] = [
+        output
+        for output in load_cell.get("outputs", [])
+        if "Loading WLD files:" not in output_text(output)
+    ]
 
 
 MIGRATIONS = {
