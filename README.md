@@ -46,6 +46,19 @@ Key analyses:
 - Use `src/analyze_big_three.ipynb` for lifetime Big Three progression, annual snapshots, historical trends, and one-year projections.
 - Use `src/analyze_bodyweight_strength_evals.ipynb` for bodyweight-aligned strength history, all-attempt Pareto frontiers, and social-card exports for bench, squat, deadlift, and overhead press.
 
+To forecast the bodyweight at which a target DEXA body-fat percentage is reached:
+
+```bash
+source venv/bin/activate
+python scripts/forecast_bulk_ceiling.py --output-dir outputs
+```
+
+The run reads `data/dexa.csv` and writes a Markdown report, a probability-curve
+CSV, and a chart. It is seeded, so repeat runs reproduce byte for byte. Pass
+`--target-body-fat-pct`, `--simulations`, `--seed`, `--measurement-error-pp`,
+`--partition-noise-scale`, or `--max-weight-lb` to change the assumptions. The
+report prints every one of them alongside the result.
+
 To refresh the bodyweight and DEXA CSV exports from `Weight Log.xlsx`:
 
 ```bash

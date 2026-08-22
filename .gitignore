@@ -3,6 +3,10 @@ keys.py
 .artifacts/
 skills/*-workspace/
 
+# Generated bulk-ceiling forecast artifacts (derived from personal DEXA data)
+outputs/bulk-ceiling-*
+.artifacts/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

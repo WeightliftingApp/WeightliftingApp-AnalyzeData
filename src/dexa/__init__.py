@@ -7,14 +7,45 @@ from .calculations import (
     fit_lean_mass_trend,
     modeled_body_fat_pct,
 )
+from .forecast import (
+    AssumptionSensitivity,
+    BulkCeilingForecast,
+    BulkInterval,
+    ForecastAssumptions,
+    JackknifeSensitivity,
+    constant_ffm_ceiling_lb,
+    crossing_weight_lb,
+    extract_bulk_intervals,
+    forecast_bulk_ceiling,
+    probability_curve_frame,
+    probability_under_target,
+    safety_ceiling_lb,
+    simulate_crossing_weights,
+)
+from .forecast_pipeline import ForecastOutputs, run_forecast_report
 from .pipeline import ReportOutputs, run_report
 
 __all__ = [
+    "AssumptionSensitivity",
+    "BulkCeilingForecast",
+    "BulkInterval",
     "DexaAnalysis",
+    "ForecastAssumptions",
+    "ForecastOutputs",
+    "JackknifeSensitivity",
     "ReportOutputs",
     "add_interval_efficiency",
     "analyze_body_composition",
+    "constant_ffm_ceiling_lb",
+    "crossing_weight_lb",
+    "extract_bulk_intervals",
     "fit_lean_mass_trend",
+    "forecast_bulk_ceiling",
     "modeled_body_fat_pct",
+    "probability_curve_frame",
+    "probability_under_target",
+    "run_forecast_report",
     "run_report",
+    "safety_ceiling_lb",
+    "simulate_crossing_weights",
 ]
