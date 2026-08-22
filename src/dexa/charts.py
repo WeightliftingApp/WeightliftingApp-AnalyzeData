@@ -17,6 +17,14 @@ from .calculations import (
 )
 
 
+def scan_sequence_footer(scan_count: int) -> str:
+    """Describe the numbered scan sequence in the lean-mass chart footer."""
+    return (
+        f"1 TO {scan_count} = TIME  /  BLUE = CUT  /  "
+        "RED = BULK  /  BAR = VS TREND"
+    )
+
+
 def plot_composition_history(totals: pd.DataFrame, output_path: Path) -> None:
     """Plot total mass, fat-free mass, fat mass, and body-fat history."""
     with plt.style.context("dark_background"):
@@ -426,7 +434,7 @@ def plot_lean_mass_vs_bodyweight(totals: pd.DataFrame, output_path: Path) -> Non
         fig.text(
             0.95,
             0.065,
-            "1 TO 9 = TIME  /  BLUE = CUT  /  RED = BULK  /  BAR = VS TREND",
+            scan_sequence_footer(len(points)),
             fontsize=8.6,
             family=mono,
             color=muted_ink,

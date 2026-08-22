@@ -34,6 +34,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
+    print(
+        "Warning: DEXA report outputs may contain personal health data. "
+        f"Writing to {args.output_dir}",
+        file=sys.stderr,
+    )
     outputs = run_report(args.totals, args.regions, args.output_dir)
     print(f"Wrote {outputs.markdown}")
     print(f"Wrote {outputs.composition_chart}")

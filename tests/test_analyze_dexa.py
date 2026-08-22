@@ -1,5 +1,7 @@
+import io
 import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -12,9 +14,10 @@ from dexa.calculations import (
     fit_lean_mass_trend,
     modeled_body_fat_pct,
 )
-from dexa.pipeline import run_report
+from dexa.charts import scan_sequence_footer
 from dexa.report import render_markdown
 from scripts.analyze_dexa import fit_lean_mass_trend as compatibility_trend
+from scripts.analyze_dexa import main as cli_main
 
 
 def totals_fixture() -> pd.DataFrame:
@@ -61,6 +64,52 @@ def regions_fixture() -> pd.DataFrame:
                 }
             )
     return pd.DataFrame(rows)
+
+
+def future_totals_fixture() -> pd.DataFrame:
+    totals = totals_fixture()
+    future = pd.DataFrame(
+        {
+            "date": [pd.Timestamp("2027-01-15")],
+            "weight_lb": [218.0],
+            "lean_soft_tissue_lb": [181.0],
+            "fat_mass_lb": [27.5],
+            "bone_mineral_content_lb": [9.5],
+            "body_fat_pct": [12.61],
+            "fat_free_mass_lb": [190.5],
+            "ffmi": [25.80],
+            "normalized_ffmi": [25.60],
+            "bmi": [29.60],
+            "height_in": [72.0],
+            "notes": ["future scan"],
+        }
+    )
+    return pd.concat([totals, future], ignore_index=True)
+
+
+def future_regions_fixture() -> pd.DataFrame:
+    regions = regions_fixture()
+    values = {
+        "Arms": (3.8, 28.5, 1.4, 11.3),
+        "Legs": (10.5, 58.0, 3.2, 14.6),
+        "Trunk": (10.2, 84.4, 3.0, 10.5),
+        "Android (Waist)": (1.0, 12.2, 0.2, 7.5),
+        "Gynoid (Hips)": (4.8, 29.5, 1.0, 13.6),
+    }
+    future = pd.DataFrame(
+        [
+            {
+                "date": pd.Timestamp("2027-01-15"),
+                "region": region,
+                "fat_mass_lb": measurements[0],
+                "lean_soft_tissue_lb": measurements[1],
+                "bone_mineral_content_lb": measurements[2],
+                "body_fat_pct": measurements[3],
+            }
+            for region, measurements in values.items()
+        ]
+    )
+    return pd.concat([regions, future], ignore_index=True)
 
 
 class FitLeanMassTrendTest(unittest.TestCase):
@@ -112,6 +161,14 @@ class AddIntervalEfficiencyTest(unittest.TestCase):
         self.assertAlmostEqual(result.iloc[2]["interval_efficiency"], 0.8)
 
 
+class ChartTextTest(unittest.TestCase):
+    def test_scan_sequence_footer_uses_actual_scan_count(self):
+        self.assertEqual(
+            scan_sequence_footer(12),
+            "1 TO 12 = TIME  /  BLUE = CUT  /  RED = BULK  /  BAR = VS TREND",
+        )
+
+
 class AnalyzeBodyCompositionTest(unittest.TestCase):
     def test_preserves_latest_scan_calculations(self):
         analysis = analyze_body_composition(totals_fixture(), regions_fixture())
@@ -123,9 +180,68 @@ class AnalyzeBodyCompositionTest(unittest.TestCase):
         self.assertAlmostEqual(analysis.delta["body_fat_pct"], -2.46)
 
         markdown = render_markdown(analysis)
-        self.assertIn("**8.4 lb down**", markdown)
-        self.assertIn("**79% of the scale loss came from fat**", markdown)
+        self.assertIn("Total mass fell 8.4 lb to 214.8 lb", markdown)
+        self.assertIn("Fat mass fell 6.6 lb to 28.2 lb", markdown)
         self.assertIn("| FFMI | 25.55 | 25.31 | -0.24 |", markdown)
+
+    def test_current_scan_uses_analysis_values_in_interpretation(self):
+        totals = totals_fixture()
+        totals.loc[totals.index[-1], "body_fat_pct"] = 12.34
+        totals.loc[totals.index[-1], "ffmi"] = 26.11
+        totals.loc[totals.index[-1], "normalized_ffmi"] = 25.99
+        totals.loc[totals.index[-1], "bmi"] = 28.88
+
+        analysis = analyze_body_composition(totals, regions_fixture())
+        markdown = render_markdown(analysis)
+
+        self.assertIn("current CSV value is **12.3%**", markdown)
+        self.assertIn("**26.11 raw / 25.99 height-normalized**", markdown)
+        self.assertIn("current value is **28.88**", markdown)
+
+    def test_default_current_scan_omits_supplemental_claims(self):
+        analysis = analyze_body_composition(totals_fixture(), regions_fixture())
+
+        markdown = render_markdown(analysis)
+
+        self.assertIn("Supplemental interpretation unavailable", markdown)
+        supplemental_claims = [
+            "**Fat distribution:**",
+            "**VAT:**",
+            "**Bone:**",
+            "**Symmetry:**",
+            "## Honest read",
+            "## Practical next move",
+            "BodySpec report dated",
+        ]
+        for claim in supplemental_claims:
+            with self.subTest(claim=claim):
+                self.assertNotIn(claim, markdown)
+
+    def test_future_scan_omits_stale_supplemental_claims(self):
+        analysis = analyze_body_composition(
+            future_totals_fixture(), future_regions_fixture()
+        )
+
+        markdown = render_markdown(analysis)
+
+        self.assertIn("# DEXA analysis - 2027-01-15", markdown)
+        self.assertIn("**13.1% to 12.6%**", markdown)
+        self.assertIn("**25.80 raw / 25.60 height-normalized**", markdown)
+        self.assertIn("**29.60**", markdown)
+        self.assertIn("Supplemental interpretation unavailable", markdown)
+        stale_claims = [
+            "approximately the leanest",
+            "exceptionally muscular",
+            "**VAT:**",
+            "**Bone:**",
+            "**Symmetry:**",
+            "The cut worked",
+            "## Practical next move",
+            "BodySpec report dated",
+        ]
+        for claim in stale_claims:
+            with self.subTest(claim=claim):
+                self.assertNotIn(claim, markdown)
 
     def test_pure_analysis_and_rendering_do_not_write_files(self):
         totals = totals_fixture()
@@ -141,11 +257,11 @@ class AnalyzeBodyCompositionTest(unittest.TestCase):
             analysis = analyze_body_composition(totals, regions)
             markdown = render_markdown(analysis)
 
-        self.assertIn("# DEXA analysis — 2026-08-21", markdown)
+        self.assertIn("# DEXA analysis - 2026-08-21", markdown)
 
 
 class ReportPipelineTest(unittest.TestCase):
-    def test_report_run_does_not_modify_source_csvs(self):
+    def test_cli_report_run_warns_and_does_not_modify_source_csvs(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             totals_path = root / "dexa.csv"
@@ -156,14 +272,28 @@ class ReportPipelineTest(unittest.TestCase):
             totals_before = totals_path.read_bytes()
             regions_before = regions_path.read_bytes()
 
-            outputs = run_report(totals_path, regions_path, output_dir)
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                cli_main(
+                    [
+                        "--totals",
+                        str(totals_path),
+                        "--regions",
+                        str(regions_path),
+                        "--output-dir",
+                        str(output_dir),
+                    ]
+                )
 
             self.assertEqual(totals_path.read_bytes(), totals_before)
             self.assertEqual(regions_path.read_bytes(), regions_before)
-            self.assertEqual(outputs.markdown.name, "dexa-analysis-2026-08-21.md")
-            self.assertTrue(outputs.markdown.is_file())
-            self.assertTrue(outputs.composition_chart.is_file())
-            self.assertTrue(outputs.lean_mass_chart.is_file())
+            self.assertIn("may contain personal health data", stderr.getvalue())
+            self.assertTrue((output_dir / "dexa-analysis-2026-08-21.md").is_file())
+            self.assertTrue((output_dir / "dexa-composition-history.png").is_file())
+            self.assertTrue(
+                (output_dir / "dexa-lean-mass-vs-bodyweight.png").is_file()
+            )
 
 
 if __name__ == "__main__":

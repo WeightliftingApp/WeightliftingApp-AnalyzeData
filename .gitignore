@@ -1,5 +1,6 @@
 data/[!example-]*
 keys.py
+.artifacts/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
