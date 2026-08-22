@@ -54,6 +54,12 @@ loaded `WLD` instance, which is useful when a notebook loads several exports.
   plot without masked-array handling; counts computed here, which are never
   missing, are `int64`. Columns and dtypes are identical whether the export has
   2,281 workouts or none.
+- **Type stability across pandas versions.** Every date column is
+  `datetime64[ns]` on pandas 2 and pandas 3, populated or empty. pandas 3 would
+  otherwise infer `datetime64[us]` from Python datetimes and `datetime64[s]`
+  from an empty column, so the module casts explicitly. Text columns stay
+  `object` rather than adopting the pandas 3 string dtype, and a value the
+  export did not record is `None`, never `NaN`.
 
 ## `workouts`: one row per session
 

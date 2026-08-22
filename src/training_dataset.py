@@ -422,14 +422,43 @@ def _frame(
     for column, dtype in dtypes.items():
         series = frame[column]
         if dtype == "datetime64[ns]":
-            frame[column] = pd.to_datetime(series, errors="coerce")
+            # The trailing astype is not redundant: pandas 3 infers microsecond
+            # resolution from Python datetimes and second resolution from an
+            # empty column, so without it a populated frame and an empty one
+            # disagree, and neither matches the documented dtype.
+            frame[column] = pd.to_datetime(series, errors="coerce").astype(dtype)
         elif dtype in ("float64", "int64"):
             frame[column] = pd.to_numeric(series, errors="coerce").astype(dtype)
         else:
-            frame[column] = series.astype("object")
+            frame[column] = _as_object(series)
     if len(frame):
         frame = frame.sort_values(list(sort_by), kind="stable")
     return frame.reset_index(drop=True)
+
+
+def _is_missing(value: Any) -> bool:
+    """Report the several ways pandas and the export spell "no value"."""
+    return (
+        value is None
+        or value is pd.NaT
+        or value is pd.NA
+        or (isinstance(value, float) and value != value)
+    )
+
+
+def _as_object(series: pd.Series) -> pd.Series:
+    """Rebuild a text column with ``None`` for every missing entry.
+
+    Constructing a DataFrame from records turns ``None`` in a text column into
+    ``NaN`` under pandas 3, which would make ``iteration`` and ``custom`` report
+    a float where the export recorded nothing. Missing stays ``None`` here, and
+    the column stays ``object`` rather than adopting the pandas 3 string dtype.
+    """
+    return pd.Series(
+        [None if _is_missing(value) else value for value in series],
+        index=series.index,
+        dtype="object",
+    )
 
 
 def _to_timestamp(value: Any) -> Any:

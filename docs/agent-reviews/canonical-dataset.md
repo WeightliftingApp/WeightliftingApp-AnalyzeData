@@ -99,6 +99,49 @@ moved into `docs/training-dataset.md`, phrased as what the module's tests need
 repository's test policy. `git merge-tree` against `codex/repo-foundation`
 reports no conflict.
 
+## Review follow-up: pandas 3
+
+A combined integration run on a fresh install with pandas 3.0.5 failed three of
+this module's tests. All three were the module's own dtype and null contract
+drifting with the pandas version, not test noise, and all three are fixed.
+
+Reproduced locally in a throwaway venv with pandas 3.0.5 and numpy 2.5.2 on
+Python 3.14, which showed the same three failures before the fix.
+
+### 1. Text columns reported `NaN` where the export recorded nothing
+
+`exercises.iteration` came back as `nan` instead of `None`. Building a DataFrame
+from records under pandas 3 infers the new string dtype for a text column and
+turns `None` into `NaN` on the way in, so an exercise with no iteration
+reported a float. `_as_object` now rebuilds every text column with `None` for
+each missing entry and pins the column to `object`, which keeps the documented
+`None` semantics and keeps the dtype off the pandas 3 string dtype.
+
+### 2. Date dtypes differed between populated and empty frames
+
+Populated frames carried `datetime64[us]`, inferred from Python datetimes, while
+empty frames carried `datetime64[s]`, inferred from an empty column. Neither
+matched the documented `datetime64[ns]`. `_frame` now casts every date column
+with `.astype("datetime64[ns]")` after parsing, which is a no-op on pandas 2 and
+normalizes both cases on pandas 3.
+
+### 3. Empty bodyweight `week_of` was `datetime64[s]`
+
+Same root cause as item 2, reached through the no bodyweight path, and fixed by
+the same cast.
+
+### Regression coverage
+
+`DtypeContractTest` asserts the dtype names literally, for populated and empty
+frames separately, across all four frames. The previous check compared an empty
+frame's dtypes against a populated one, which only proves the two agree: under
+pandas 3 they drifted together and the comparison still would have passed for
+the bodyweight case and failed uninformatively for the rest. The new tests also
+assert that every text column holds only `str` or `None`, never a float.
+
+Confirmed non vacuous by running the new tests against a copy of the pre-fix
+module under pandas 3: three of the five fail, one per defect above.
+
 ## Judgment calls
 
 - **Source numerics are `float64`, loader computed counts are `int64`.** `reps`
@@ -125,6 +168,14 @@ reports no conflict.
 - **Synthetic `exercise_id`/`set_id`.** The export gives UUIDs only to workouts.
   `"{workout_id}:{index}"` is deterministic and readable, and it makes the
   parent and child relationship testable. It is also why review item 2 matters.
+- **Dtypes are pinned rather than inherited from pandas.** The alternative was
+  to document whatever pandas infers, which would make the column contract vary
+  by installed version. Pinning costs one cast per date column and one rebuild
+  per text column on load, which is not measurable next to parsing the export.
+- **Text columns stay `object` instead of adopting the pandas 3 string dtype.**
+  The string dtype would be a better fit for these columns, but switching would
+  change what callers get depending on the pandas version, which is the problem
+  this fix exists to remove. Revisit when the repository requires pandas 3.
 - **The loader reads the JSON instead of delegating to `WLD(file_path=...)`.**
   Validating the payload requires seeing it. The file is still parsed once and
   the schema still builds every object, so this is a change of entry point, not
@@ -173,6 +224,9 @@ reports no conflict.
   is not JSON.
 - Unparseable workout date raises `ValueError` naming the date; missing file
   raises `FileNotFoundError`.
+- Dtype contract: date columns are `datetime64[ns]` and text columns are
+  `object` in populated and in empty frames, asserted by name rather than by
+  comparing frames; missing text values are `None` and never `NaN`.
 - Bodyweight CSV: exported and canonical headers, three different date layouts
   in one column, blank, `0`, and negative values kept as rows with `NaN`,
   unparseable week dropped, duplicate week keeps the last, wrong headers raise
@@ -183,9 +237,13 @@ reports no conflict.
 
 ## Issues and ambiguities
 
-- pandas 1.4 compatibility is argued, not executed. The environment has pandas
-  2.2.3 only, so the `ast` guard and per cell parsing are the evidence. Running
-  the suite against pandas 1.4 in CI would settle it.
+- pandas 1.4 compatibility is argued, not executed. No pandas 1.4 interpreter is
+  available here, so the `ast` guard and per cell parsing are the evidence. The
+  suite now runs on pandas 2.2.3 and 3.0.5, so the untested end is the floor,
+  not the ceiling. A CI matrix would settle it.
+- The pandas 3 run used a throwaway venv built for this fix, not the repository's
+  own environment, which still has pandas 2.2.3. The packaging branch owns which
+  versions CI exercises.
 - The example export contains no `incline`, `rpe`, or `rir` values, so those
   columns are declared and typed but exercised only by synthetic fixtures.
 - `data/weight.csv` is gitignored and not present in this worktree. Bodyweight
@@ -215,8 +273,17 @@ reports no conflict.
 PYTHONPATH=.:src venv/bin/python -m unittest discover -s tests
 
 # first commit: 33 tests (13 existing + 20 new), OK
-# after the review fixes: 50 tests (13 existing + 37 new), OK
+# after the first review round: 50 tests, OK
+# after the pandas 3 fixes: 55 tests (13 existing + 42 new), OK on pandas 2.2.3
 PYTHONPATH=.:src venv/bin/python -m unittest discover -s tests -v
+
+# same 55 tests on a throwaway venv with pandas 3.0.5, numpy 2.5.2, Python 3.14:
+# 3 failures before the fix, all 55 passing after
+PYTHONPATH=.:src <scratch>/pandas3/bin/python -m unittest discover -s tests
+
+# confirmed the new dtype tests fail against a copy of the pre-fix module
+PYTHONPATH=<scratch>/broken:.:src <scratch>/pandas3/bin/python -m unittest \
+  tests.test_training_dataset.DtypeContractTest
 
 # example export loads through the new interface in about 0.3s
 PYTHONPATH=src venv/bin/python -c "from training_dataset import load_training_dataset; \
@@ -244,7 +311,7 @@ anywhere, so the suite runs under `unittest`, matching the existing tests.
 2. If a second notebook needs the same mapping, add it as an explicit caller
    supplied dict (`dataset.with_lifts({...})`), not a built in taxonomy.
 3. Once `codex/repo-foundation` lands, run this suite under `python -m pytest`
-   and, if CI runs a matrix, include pandas 1.4 so the compatibility claim is
-   executed rather than asserted.
+   and, if CI runs a matrix, include pandas 1.4 and pandas 3 so both ends of the
+   supported range are executed rather than asserted.
 4. Consider DEXA support once `codex/dexa-pipeline-split` settles the CSV schema
    and a fixture file exists to test against.

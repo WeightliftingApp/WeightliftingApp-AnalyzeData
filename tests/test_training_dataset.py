@@ -299,6 +299,111 @@ class EdgeCaseTest(LoaderFixture):
         self.assertIn("sets=1", repr(direct))
 
 
+class DtypeContractTest(LoaderFixture):
+    """The documented dtypes are asserted literally, not compared across frames.
+
+    Comparing an empty frame's dtypes against a populated one only proves the
+    two agree; both drifted together under pandas 3, which infers microsecond
+    resolution from Python datetimes and second resolution from an empty
+    column. These assertions name the dtype the documentation promises.
+    """
+
+    DATE_COLUMNS = {
+        "workouts": ("date", "week_of"),
+        "exercises": ("date", "week_of"),
+        "sets": ("date", "week_of"),
+        "bodyweight": ("week_of",),
+    }
+    TEXT_COLUMNS = {
+        "workouts": ("workout_id", "name"),
+        "exercises": ("exercise_id", "workout_id", "name", "iteration"),
+        "sets": ("set_id", "exercise_id", "name", "iteration", "custom"),
+    }
+
+    def populated(self):
+        return self.load(
+            wld_payload(
+                [
+                    workout(
+                        exercises=[
+                            exercise(sets=[{"reps": 5, "weight": 135, "custom": "belt"}])
+                        ]
+                    )
+                ]
+            ),
+            bodyweight_path=self.write_csv("Week of,Average\n2024-01-01,192.6\n"),
+        )
+
+    def assert_date_columns(self, data, label):
+        for frame_name, columns in self.DATE_COLUMNS.items():
+            frame = getattr(data, frame_name)
+            for column in columns:
+                self.assertEqual(
+                    str(frame[column].dtype),
+                    "datetime64[ns]",
+                    f"{label} {frame_name}.{column}",
+                )
+
+    def test_populated_date_columns_are_nanosecond_datetimes(self):
+        self.assert_date_columns(self.populated(), "populated")
+
+    def test_empty_date_columns_are_nanosecond_datetimes(self):
+        self.assert_date_columns(self.load(wld_payload([])), "empty")
+
+    def test_text_columns_stay_object_when_populated_and_when_empty(self):
+        for label, data in (
+            ("populated", self.populated()),
+            ("empty", self.load(wld_payload([]))),
+        ):
+            for frame_name, columns in self.TEXT_COLUMNS.items():
+                frame = getattr(data, frame_name)
+                for column in columns:
+                    self.assertEqual(
+                        str(frame[column].dtype),
+                        "object",
+                        f"{label} {frame_name}.{column}",
+                    )
+
+    def test_missing_text_values_are_none_and_never_nan(self):
+        data = self.load(
+            wld_payload(
+                [
+                    workout(
+                        exercises=[
+                            exercise(iteration=None, sets=[{"reps": 5}]),
+                            exercise(sets=[{"reps": 5, "custom": "belt"}]),
+                        ]
+                    )
+                ]
+            )
+        )
+
+        self.assertIsNone(data.exercises["iteration"].iloc[0])
+        self.assertIsNone(data.sets["iteration"].iloc[0])
+        self.assertIsNone(data.sets["custom"].iloc[0])
+        self.assertEqual(data.sets["custom"].iloc[1], "belt")
+        for frame_name, columns in self.TEXT_COLUMNS.items():
+            frame = getattr(data, frame_name)
+            for column in columns:
+                for position, value in enumerate(frame[column]):
+                    self.assertTrue(
+                        value is None or isinstance(value, str),
+                        f"{frame_name}.{column}[{position}] is {value!r}",
+                    )
+
+    def test_numeric_columns_keep_their_documented_dtypes(self):
+        for label, data in (
+            ("populated", self.populated()),
+            ("empty", self.load(wld_payload([]))),
+        ):
+            self.assertEqual(str(data.workouts["set_count"].dtype), "int64", label)
+            self.assertEqual(str(data.workouts["volume"].dtype), "float64", label)
+            self.assertEqual(str(data.sets["reps"].dtype), "float64", label)
+            self.assertEqual(
+                str(data.bodyweight["bodyweight"].dtype), "float64", label
+            )
+
+
 class WorkoutIdTest(LoaderFixture):
     """Exercise and set ids derive from the workout uuid, so it must be sound."""
 
