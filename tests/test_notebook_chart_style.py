@@ -30,8 +30,8 @@ class NotebookChartStyleCoverageTest(unittest.TestCase):
                     f"{notebook_path.name} cell {index} bypasses chart_style",
                 )
 
-        self.assertEqual(len(chart_cells), 23)
-        self.assertEqual(len(chart_notebooks), 10)
+        self.assertEqual(len(chart_cells), 26)
+        self.assertEqual(len(chart_notebooks), 11)
 
     def test_chart_free_streak_notebook_stays_chart_free(self):
         path = NOTEBOOKS / "analyze_workout_streaks.ipynb"
