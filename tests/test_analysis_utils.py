@@ -115,28 +115,50 @@ class BuildTrimmedTrailingBodyweightTest(unittest.TestCase):
         self.assertTrue(result.iloc[:6]["bodyweight"].isna().all())
         self.assertAlmostEqual(result.iloc[-1]["bodyweight"], 202.0)
 
-    def test_missing_calendar_day_prevents_a_window_value(self):
-        weights = pd.DataFrame(
+    def test_averages_middle_five(self):
+        daily = pd.DataFrame(
+            {
+                "date": pd.date_range("2026-08-15", periods=7),
+                "weight": [214.0, 212.8, 215.2, 215.1, 215.6, 214.3, 210.4],
+            }
+        )
+
+        result = build_trimmed_trailing_bodyweight(daily)
+        latest = result.iloc[-1]
+
+        self.assertAlmostEqual(latest["bodyweight"], 214.28)
+        self.assertTrue(result.iloc[:-1]["bodyweight"].isna().all())
+
+    def test_missing_calendar_day_invalidates_window(self):
+        daily = pd.DataFrame(
             {
                 "date": pd.to_datetime(
                     [
-                        "2026-08-14",
                         "2026-08-15",
                         "2026-08-16",
-                        "2026-08-18",
+                        "2026-08-17",
                         "2026-08-19",
                         "2026-08-20",
                         "2026-08-21",
                     ]
                 ),
-                "weight": [200.0] * 7,
+                "weight": [214.0, 212.8, 215.2, 215.6, 214.3, 210.4],
             }
         )
 
-        result = build_trimmed_trailing_bodyweight(weights)
+        result = build_trimmed_trailing_bodyweight(daily)
 
         self.assertTrue(result["bodyweight"].isna().all())
 
+    def test_rejects_invalid_trim_and_missing_columns(self):
+        with self.assertRaises(ValueError):
+            build_trimmed_trailing_bodyweight(
+                pd.DataFrame({"date": ["2026-08-21"], "weight": [210.4]}),
+                window_days=7,
+                trim_each_side=4,
+            )
+        with self.assertRaises(ValueError):
+            build_trimmed_trailing_bodyweight(pd.DataFrame({"date": []}))
 
 class BuildBigThreePrHistoryTest(unittest.TestCase):
     def setUp(self):
