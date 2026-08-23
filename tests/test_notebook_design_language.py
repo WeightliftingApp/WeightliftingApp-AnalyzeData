@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -19,7 +20,7 @@ class NotebookDesignLanguageTest(unittest.TestCase):
     def test_priority_migration_is_idempotent(self):
         subprocess.run(
             [
-                str(REPO_ROOT / ".venv/bin/python"),
+                sys.executable,
                 str(REPO_ROOT / "scripts/upgrade_notebook_design_language.py"),
                 "--check",
             ],

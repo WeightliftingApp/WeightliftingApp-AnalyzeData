@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,7 +16,7 @@ class ChartLanguageGalleryTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             completed = subprocess.run(
                 [
-                    str(REPO_ROOT / ".venv/bin/python"),
+                    sys.executable,
                     str(REPO_ROOT / "scripts/render_chart_language_gallery.py"),
                     "--output-dir",
                     temp_dir,
