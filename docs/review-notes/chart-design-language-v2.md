@@ -97,8 +97,10 @@ The 26 notebook images produced after the first shared-style migration were copi
 
 ### Follow-up
 
-- Review and commit the preserved training-program and bodyweight-analysis work when ready.
-- Drop the named safety stash only after that work is accepted; it is intentionally retained for recovery.
+- The preserved training-program and bodyweight-analysis work was accepted and
+  merged in PR #1.
+- The named safety stash was dropped after the merge and local synchronization
+  were verified.
 
 ## Repository conventions, 2026-08-23
 
@@ -120,3 +122,17 @@ The 26 notebook images produced after the first shared-style migration were copi
 - Kept committed notebook output as a deliberate option rather than requiring a
   blanket stripping hook. Some analyses depend on private inputs, so embedded
   output can be useful to readers who cannot reproduce a run.
+
+## Session closeout, 2026-08-23
+
+- Merged PR #1 at `2c867a4` after 245 local tests and successful GitHub jobs on
+  Python 3.10 through 3.14.
+- Replaced two test-only `.venv/bin/python` assumptions with `sys.executable`
+  after the first CI run exposed the portability bug.
+- Limited push-triggered CI to `main`; pull requests still run the full matrix
+  without also starting an identical branch-push matrix.
+- Removed the merged feature branch, safety stash, disposable worker branches,
+  and evaluation branches after verifying the merged state. The local checkout
+  now has one worktree and one branch, `main`.
+- Kept ignored personal reports and visual comparison artifacts on disk for
+  future analysis and review.
