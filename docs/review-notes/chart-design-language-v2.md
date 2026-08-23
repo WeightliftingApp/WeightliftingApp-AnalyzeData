@@ -83,3 +83,40 @@ The 26 notebook images produced after the first shared-style migration were copi
 3. Add an accessibility review with grayscale and common color-vision simulations if these charts will be published outside the notebooks.
 4. Rebuild the gallery after Matplotlib, pandas, or JoyPy upgrades.
 5. If the design direction is accepted, extend archetype declarations and descriptive title hierarchy to the unchanged controls in a separate reviewable pass.
+
+## Integration cleanup, 2026-08-23
+
+- Fast-forwarded `main` through all 32 integration commits after preserving the existing dirty checkout in the named stash `pre-merge user work before integrated-low-risk-upgrades`.
+- Copied the ignored chart baselines, comparison galleries, golden cards, and DEXA artifacts into the main checkout before removing the disposable worktree.
+- Resolved the bodyweight-strength notebook by keeping the shared chart frame and the newer trailing seven-day trimmed bodyweight calculation.
+- Kept the modular DEXA entry point and expanded integration tests because they contain the three compatibility functions and tests from the earlier monolithic script plus the newer pipeline coverage. The exact pre-merge files remain recoverable from the named stash.
+- Migrated the restored training-program notebook's three figures to the shared chart language and updated its companion Python analysis. The notebook executed without errors and its rendered charts were reviewed at full size.
+- Reused the repository's existing `venv` through an ignored `.venv` link after installing the declared notebook and development extras. This removes the deleted worktree as an environment dependency.
+- Validation after combining both work streams: 245 tests passed.
+- Deleted the empty Superset workspace and its merged local branch. Only the main AnalyzeData workspace remains.
+
+### Follow-up
+
+- Review and commit the preserved training-program and bodyweight-analysis work when ready.
+- Drop the named safety stash only after that work is accepted; it is intentionally retained for recovery.
+
+## Repository conventions, 2026-08-23
+
+- Added `docs/analysis-architecture.md` as the canonical description of the
+  module, notebook, script, data-adapter, test, and generated-output roles.
+- Added `AGENTS.md` as the short operational contract shared by Codex, Claude,
+  Hermes, and other repository agents. Updated `CLAUDE.md` to point to that
+  contract and removed its stale notebook-only guidance.
+- Updated the README to describe modules as the source of truth, notebooks as
+  narrative adapters, and scripts as operational adapters.
+- Changed the default ignore rule from bulk-forecast output only to all new
+  files under `outputs/`. The four already tracked strength-evaluation images
+  remain historical exceptions. New durable artifacts require an explicit
+  decision and provenance.
+- Documented the current training-program notebook and percent-format Python
+  duplication as follow-up work. It was not refactored during the documentation
+  pass because that would mix a structural source change into cleanup intended
+  to make the existing state legible.
+- Kept committed notebook output as a deliberate option rather than requiring a
+  blanket stripping hook. Some analyses depend on private inputs, so embedded
+  output can be useful to readers who cannot reproduce a run.

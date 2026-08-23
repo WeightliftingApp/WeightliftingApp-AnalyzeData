@@ -14,7 +14,9 @@ You can either use your own data or use the example data provided in the `data/e
 
 2. Send the data to yourself (eg. via email)
 
-3. Place your `.wld` file in the `data` folder and update the `file_path` in the `WLD` class in the notebook to the name of the file(s) you want to use.
+3. Place your `.wld` file in the `data` folder and pass its path to
+   `load_training_dataset` or the source adapter used by the analysis. Personal
+   files under `data/` are ignored by Git.
 
 ## Setup
 
@@ -28,7 +30,12 @@ python -m pip install -e ".[notebooks]"
 
 ## Usage
 
-Run any of the `.ipynb` Jupyter notebooks in the `src/` folder or create your own.
+Use the notebooks in `src/` to explore and read analyses. Use commands in
+`scripts/` for repeatable or headless runs. Reusable calculations live in
+importable modules under `src/`; notebooks and scripts should call the same
+implementation rather than duplicate it. See
+[docs/analysis-architecture.md](docs/analysis-architecture.md) for the full
+convention.
 
 For analyses that would otherwise walk the nested export structure, load the
 canonical dataset instead. It returns flat workout, exercise, and set
@@ -43,8 +50,10 @@ data.sets[data.sets["display_name"] == "Flat Barbell Bench Press"]
 
 Key analyses:
 
+- `src/analyze_training_program.ipynb`: live full-history training style, direct and estimated muscle-group volume, frequency, current split inference, and like-for-like press progression. A run writes its recommendation to `outputs/training-program-recommendation.md`.
 - Use `src/analyze_big_three.ipynb` for lifetime Big Three progression, annual snapshots, historical trends, and one-year projections.
 - Use `src/analyze_bodyweight_strength_evals.ipynb` for bodyweight-aligned strength history, all-attempt Pareto frontiers, and social-card exports for bench, squat, deadlift, and overhead press.
+- `scripts/analyze_dexa.py` analyzes DEXA history, lean-mass trend residuals, dated scan paths, and modeled one-point body-fat contours.
 
 To forecast the bodyweight at which a target DEXA body-fat percentage is reached:
 
@@ -83,9 +92,13 @@ python scripts/convert_dexa_xlsx.py
 Install the test dependencies and run the complete suite from the repository root:
 
 ```bash
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,notebooks]"
 python -m pytest
 ```
+
+Agent instructions are in [AGENTS.md](AGENTS.md). Shared chart conventions and
+the baseline-comparison workflow are in
+[docs/chart-style.md](docs/chart-style.md).
 
 ## Contributing
 

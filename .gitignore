@@ -3,9 +3,9 @@ keys.py
 .artifacts/
 skills/*-workspace/
 
-# Generated bulk-ceiling forecast artifacts (derived from personal DEXA data)
-outputs/bulk-ceiling-*
-.artifacts/
+# Generated analysis output derived from local or personal data. A few legacy
+# files in this directory are already tracked; this rule applies to new files.
+outputs/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
