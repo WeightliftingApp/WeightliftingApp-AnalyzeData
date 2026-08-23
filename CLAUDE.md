@@ -1,68 +1,87 @@
-# CLAUDE.md
+# Claude Code guide
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Follow [`AGENTS.md`](AGENTS.md) first. It is the shared instruction file for
+Claude Code, Codex, Hermes, and other repository agents. The architecture and
+notebook conventions are documented in
+[`docs/analysis-architecture.md`](docs/analysis-architecture.md).
 
-## Project Overview
+## Project overview
 
-Analysis scripts for data exported from [Weightlifting App](https://apps.apple.com/us/app/weightlifting-app/id1266077653). The project consists of Jupyter notebooks that analyze workout data stored in `.wld` files (JSON format).
+This repository analyzes Weightlifting App exports, bodyweight history, and DEXA
+data. It contains tested Python modules, narrative Jupyter notebooks, and command
+adapters. It is no longer a notebook-only project.
 
-## Development Setup
+## Development setup
 
 ```bash
-# Create/activate virtual environment
-python3 -m venv venv
-source venv/bin/activate
+# Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
 
-# Install dependencies
-pip install -r requirements.txt
+# Install the project, notebook tools, and test runner
+python -m pip install -e ".[dev,notebooks]"
 
 # Run notebooks
 jupyter notebook src/
+
+# Run the complete test suite from the repository root
+python -m pytest
 ```
 
-## Data Files
+## Data files
 
-- `data/*.wld` - Workout data exports from Weightlifting App (JSON format)
-- `data/weight.csv` - Body weight tracking data with columns: `Week of` (date), `Average` (weight in lbs)
+- `data/*.wld`: Weightlifting App exports in JSON format
+- `data/weight.csv`: bodyweight history with `Week of` and `Average` columns
+- `data/dexa.csv` and `data/dexa_regions.csv`: normalized DEXA history
+
+Personal data is ignored. Do not force-add it or copy its values into logs.
 
 To update weight.csv from the source spreadsheet:
 ```bash
-source venv/bin/activate && python scripts/convert_weight_xlsx.py
+source .venv/bin/activate
+python scripts/convert_weight_xlsx.py
 ```
 
 ## Architecture
 
-### Schema Module (`src/schema/`)
+Do not put new analysis logic in this file. Follow the detailed contract in
+[`docs/analysis-architecture.md`](docs/analysis-architecture.md): reusable logic
+belongs in modules, notebooks explain and display it, and scripts handle
+repeatable execution and file output.
+
+Prefer the canonical dataset:
+
+```python
+from training_dataset import load_training_dataset
+
+data = load_training_dataset("data/example-chappy.wld")
+```
+
+Its table interface and normalization rules are in
+[`docs/training-dataset.md`](docs/training-dataset.md).
+
+### Schema module (`src/schema/`)
 
 Dataclass hierarchy for parsing `.wld` files:
 
-- **WLD** - Root container. Load with `WLD(file_path="../data/example-chappy.wld")`
-  - `workouts: List[Workout]` - All workout sessions
-  - `user: User` - User profile and settings
-  - `typeList: List[str]` - Exercise type definitions
+- **WLD**: root container for a raw export
+  - `workouts: List[Workout]`: all workout sessions
+  - `user: User`: user profile and settings
+  - `typeList: List[str]`: exercise type definitions
 
-- **Workout** - Single workout session
-  - `exercises: List[Exercise]` - Exercises performed
+- **Workout**: one workout session
+  - `exercises: List[Exercise]`: exercises performed
   - `date: datetime`, `duration: int` (seconds), `name: str`
-  - `volume()` - Total workout volume, `numSets()` - Total set count
+  - `volume()`: total volume; `numSets()`: total set count
 
-- **Exercise** - Single exercise within a workout
-  - `sets: List[Set]` - Individual sets
-  - `displayName()` - Full name including iteration (e.g., "Incline Dumbbell Bench Press")
-  - `volume()` - Exercise volume
+- **Exercise**: one exercise within a workout
+  - `sets: List[Set]`: individual sets
+  - `displayName()`: full name including the iteration
+  - `volume()`: exercise volume
 
-- **Set** - Individual set with optional fields: `reps`, `weight`, `duration`, `distance`, `volume`, `oneRM`, `rpe`, `rir`
+- **Set**: one set with optional `reps`, `weight`, `duration`, `distance`,
+  `volume`, `oneRM`, `rpe`, and `rir` fields
 
-### Notebook Pattern
-
-Notebooks in `src/` follow this pattern:
-```python
-from schema import WLD
-wld = WLD(file_path="../data/example-chappy.wld")
-
-# Access data
-for workout in wld.workouts:
-    for exercise in workout.exercises:
-        for set_data in exercise.sets:
-            # Analyze set_data.weight, set_data.reps, set_data.oneRM, etc.
-```
+Direct schema traversal remains available for parsing work. New analyses should
+start from the canonical dataset unless the nested export structure is itself
+the subject of the analysis.

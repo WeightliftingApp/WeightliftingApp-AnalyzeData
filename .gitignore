@@ -1,5 +1,11 @@
 data/[!example-]*
 keys.py
+.artifacts/
+skills/*-workspace/
+
+# Generated analysis output derived from local or personal data. A few legacy
+# files in this directory are already tracked; this rule applies to new files.
+outputs/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

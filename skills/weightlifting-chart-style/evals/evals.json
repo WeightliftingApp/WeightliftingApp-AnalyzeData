@@ -1,0 +1,47 @@
+{
+  "skill_name": "weightlifting-chart-style",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Add a squat Pareto-frontier update card beside the existing bench generator. Use the same paper style, show all historical attempts, call out the new 1RMe checkpoint, explain the bodyweight cost model, and keep the current 2400x1350 output size.",
+      "expected_output": "A squat generator that uses the shared Pareto frame, preserves the attempt and frontier semantics, includes direct annotation and footer notes, and has focused tests.",
+      "assertions": [
+        "chart.png exists and is exactly 2400 by 1350 pixels",
+        "The chart shows historical attempts, a Pareto frontier, and one directly annotated new checkpoint",
+        "The title, subtitle, evaluation metadata, axes with units, and bodyweight-cost footer make the image standalone",
+        "The implementation derives the highlighted set label and frontier counts from data instead of fixed display text",
+        "The previous frontier uses the shared blue and the new checkpoint uses the shared red",
+        "review.md records assumptions, information preserved, checks, and limitations"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Refactor the DEXA lean-mass topography chart to use the repo's shared chart style. Do not lose scan numbers, phase arrows, efficiency labels, residual bars, body-fat contours, trend lines, metadata, or the model footer. Compare it with the preserved baseline instead of asserting pixel equality.",
+      "expected_output": "A style-only migration through src/chart_style.py with all DEXA information retained and a Pillow comparison report in the ignored artifact directory.",
+      "assertions": [
+        "chart.png exists and is exactly 2000 by 1600 pixels",
+        "The output retains scan numbers, phase arrows, efficiency labels, trend residual bars, body-fat contours, trend lines, metadata, axes, and model footer",
+        "The implementation uses the repository shared chart-style interface while keeping DEXA calculations outside the style module",
+        "The migration renders the existing chart data rather than substituting a synthetic scan history",
+        "A comparison artifact or report records dimensions and coarse pixel metrics without requiring exact PNG identity",
+        "review.md records assumptions, information preserved, checks, and limitations"
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Create a new bodyweight-versus-deadlift chart for a progress review. It should match the existing editorial cards, explain the rolling bodyweight calculation, label the latest meaningful PR directly, and remain understandable when copied out of the notebook.",
+      "expected_output": "A standalone chart generator using the shared palette and framing, with semantic colors, direct annotation, model notes, deterministic dimensions, and information-preservation tests.",
+      "assertions": [
+        "chart.png exists at a deterministic documented size",
+        "The chart includes bodyweight and deadlift axes with units, a direct latest-PR annotation, and chronological context",
+        "The rolling bodyweight calculation is explained on the image, including window and trimming or averaging behavior",
+        "The Pareto frontier uses the shared blue and the highlighted advance uses the shared red",
+        "The warm paper framing, restrained semantic color, metadata, and footer make the chart understandable outside a notebook",
+        "review.md records assumptions, information preserved, checks, and limitations"
+      ],
+      "files": []
+    }
+  ]
+}

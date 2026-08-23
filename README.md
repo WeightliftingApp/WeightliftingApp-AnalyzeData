@@ -2,11 +2,11 @@
 
 This repo provides a variety of scripts to analyze the data from [Weightlifting App](https://apps.apple.com/us/app/weightlifting-app/id1266077653) 💪
 
-## Data Setup
+## Data setup
 
 You can either use your own data or use the example data provided in the `data/example-*.wld` files.
 
-### Using Your Own Data
+### Using your own data
 
 1. Open [Weightliting App](https://apps.apple.com/us/app/weightlifting-app/id1266077653) on your iPhone and navigate to User -> Settings -> Export All Data.
 
@@ -14,24 +14,91 @@ You can either use your own data or use the example data provided in the `data/e
 
 2. Send the data to yourself (eg. via email)
 
-3. Place your `.wld` file in the `data` folder and update the `file_path` in the `WLD` class in the notebook to the name of the file(s) you want to use.
+3. Place your `.wld` file in the `data` folder and pass its path to
+   `load_training_dataset` or the source adapter used by the analysis. Personal
+   files under `data/` are ignored by Git.
+
+## Setup
+
+Python 3.10 or newer is required.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[notebooks]"
+```
 
 ## Usage
 
-Run any of the `.ipynb` Jupyter notebooks in the `src/` folder or create your own.
+Use the notebooks in `src/` to explore and read analyses. Use commands in
+`scripts/` for repeatable or headless runs. Reusable calculations live in
+importable modules under `src/`; notebooks and scripts should call the same
+implementation rather than duplicate it. See
+[docs/analysis-architecture.md](docs/analysis-architecture.md) for the full
+convention.
+
+For analyses that would otherwise walk the nested export structure, load the
+canonical dataset instead. It returns flat workout, exercise, and set
+DataFrames with documented columns (see [docs/training-dataset.md](docs/training-dataset.md)):
+
+```python
+from training_dataset import load_training_dataset
+
+data = load_training_dataset("../data/example-chappy.wld")
+data.sets[data.sets["display_name"] == "Flat Barbell Bench Press"]
+```
 
 Key analyses:
 
-- `src/analyze_big_three.ipynb` — lifetime Big Three progression, annual snapshots, historical trends, and one-year projections.
-- `src/analyze_bodyweight_strength_evals.ipynb` — bodyweight-aligned strength history, all-attempt Pareto frontiers, and social-card exports for bench, squat, deadlift, and overhead press.
+- `src/analyze_training_program.ipynb`: live full-history training style, direct and estimated muscle-group volume, frequency, current split inference, and like-for-like press progression. A run writes its recommendation to `outputs/training-program-recommendation.md`.
+- Use `src/analyze_big_three.ipynb` for lifetime Big Three progression, annual snapshots, historical trends, and one-year projections.
+- Use `src/analyze_bodyweight_strength_evals.ipynb` for bodyweight-aligned strength history, all-attempt Pareto frontiers, and social-card exports for bench, squat, deadlift, and overhead press.
+- `scripts/analyze_dexa.py` analyzes DEXA history, lean-mass trend residuals, dated scan paths, and modeled one-point body-fat contours.
+
+To forecast the bodyweight at which a target DEXA body-fat percentage is reached:
+
+```bash
+source .venv/bin/activate
+python scripts/forecast_bulk_ceiling.py --output-dir outputs
+```
+
+The run reads `data/dexa.csv` and writes a Markdown report, a probability-curve
+CSV, and a chart. It is seeded, so repeat runs reproduce byte for byte.
+
+Modeling assumptions are set with `--target-body-fat-pct`, `--simulations`,
+`--seed`, `--measurement-error-pp`, `--partition-noise-scale`,
+`--resample-unit`, and `--max-weight-lb`. The report prints every one of them
+alongside the result, along with a held-out predictive score.
+
+Planning inputs are optional and have no silent defaults. Without
+`--current-bodyweight-lb` (or `--weight-log`, a weekly CSV with `Week of` and
+`Average` columns) headroom is measured from the DEXA scan weight and labelled
+as such. Without `--weekly-bulk-rate-lb` no duration is reported:
+
+```bash
+python scripts/forecast_bulk_ceiling.py \
+  --current-bodyweight-lb 200 --weekly-bulk-rate-lb 0.5
+```
 
 To refresh the bodyweight and DEXA CSV exports from `Weight Log.xlsx`:
 
 ```bash
-source venv/bin/activate
 python scripts/convert_weight_xlsx.py
 python scripts/convert_dexa_xlsx.py
 ```
+
+## Development
+
+Install the test dependencies and run the complete suite from the repository root:
+
+```bash
+python -m pip install -e ".[dev,notebooks]"
+python -m pytest
+```
+
+Agent instructions are in [AGENTS.md](AGENTS.md). Shared chart conventions and
+the baseline-comparison workflow are in
+[docs/chart-style.md](docs/chart-style.md).
 
 ## Contributing
 

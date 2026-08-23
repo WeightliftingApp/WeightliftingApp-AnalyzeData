@@ -5,6 +5,7 @@ import pandas as pd
 
 from analysis_utils import (
     build_big_three_pr_history,
+    build_trimmed_trailing_bodyweight,
     calculate_workout_streaks,
     mark_pareto_frontier,
 )
@@ -99,6 +100,65 @@ class MarkParetoFrontierTest(unittest.TestCase):
 
         self.assertEqual(result["is_pareto"].tolist(), [True, False, False])
 
+
+class BuildTrimmedTrailingBodyweightTest(unittest.TestCase):
+    def test_drops_one_high_and_low_from_each_complete_seven_day_window(self):
+        weights = pd.DataFrame(
+            {
+                "date": pd.date_range("2026-08-15", periods=7, freq="D"),
+                "weight": [200.0, 201.0, 202.0, 250.0, 203.0, 204.0, 100.0],
+            }
+        )
+
+        result = build_trimmed_trailing_bodyweight(weights)
+
+        self.assertTrue(result.iloc[:6]["bodyweight"].isna().all())
+        self.assertAlmostEqual(result.iloc[-1]["bodyweight"], 202.0)
+
+    def test_averages_middle_five(self):
+        daily = pd.DataFrame(
+            {
+                "date": pd.date_range("2026-08-15", periods=7),
+                "weight": [214.0, 212.8, 215.2, 215.1, 215.6, 214.3, 210.4],
+            }
+        )
+
+        result = build_trimmed_trailing_bodyweight(daily)
+        latest = result.iloc[-1]
+
+        self.assertAlmostEqual(latest["bodyweight"], 214.28)
+        self.assertTrue(result.iloc[:-1]["bodyweight"].isna().all())
+
+    def test_missing_calendar_day_invalidates_window(self):
+        daily = pd.DataFrame(
+            {
+                "date": pd.to_datetime(
+                    [
+                        "2026-08-15",
+                        "2026-08-16",
+                        "2026-08-17",
+                        "2026-08-19",
+                        "2026-08-20",
+                        "2026-08-21",
+                    ]
+                ),
+                "weight": [214.0, 212.8, 215.2, 215.6, 214.3, 210.4],
+            }
+        )
+
+        result = build_trimmed_trailing_bodyweight(daily)
+
+        self.assertTrue(result["bodyweight"].isna().all())
+
+    def test_rejects_invalid_trim_and_missing_columns(self):
+        with self.assertRaises(ValueError):
+            build_trimmed_trailing_bodyweight(
+                pd.DataFrame({"date": ["2026-08-21"], "weight": [210.4]}),
+                window_days=7,
+                trim_each_side=4,
+            )
+        with self.assertRaises(ValueError):
+            build_trimmed_trailing_bodyweight(pd.DataFrame({"date": []}))
 
 class BuildBigThreePrHistoryTest(unittest.TestCase):
     def setUp(self):
